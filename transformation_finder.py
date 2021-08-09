@@ -1,12 +1,7 @@
-#import world_builder
 import numpy as np
-import pickle
-
-with open("correlation_matrix_5x5_letters.pickle", "rb") as file:
-    correlation_matrix = pickle.load(file)
 
 def find_trafos(coeff, accuracy):
-    # form set of all correlation coefficients (might have to be adjusted)
+    # form set of all correlation coefficients
     coeff = coeff.round(accuracy)
     coeff_vals = set()
     for i in coeff:
@@ -20,7 +15,16 @@ def find_trafos(coeff, accuracy):
     for i in coeff_vals:
         s = np.argwhere(coeff == i)
         coeff_perms.append([j for j in s if j[0] <= j[1]])
-        poss_temp.append(set(s.flatten()))
+        # this is used to create poss, taking number of occurances into account
+        # alterantively, the next 7 lines can simply be replaced by:
+        # poss_temp.append(set(s.flatten()))
+        unique, counts = np.unique([j for j in s if j[0] <= j[1]], return_counts=True)
+        for j in set(counts):
+            t = set()
+            for k in range(len(unique)):
+                if counts[k] == j:
+                    t.add(unique[k])
+            poss_temp.append(t)
         
     for i in range(np.shape(coeff)[0]):
         poss.append(set.intersection(*[j for j in poss_temp if i in j]))
@@ -65,6 +69,3 @@ def filter_perms(perms, poss, x, y):
                     continue
             poss[x2] = poss[x2].intersection(s)
     return poss
-
-#two_by_two_coeff = world_builder.two_by_two_coeff
-print(find_trafos(correlation_matrix, 3))
