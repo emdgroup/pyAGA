@@ -39,12 +39,9 @@ def calculate_trafos(perms, poss, res):
         res.append(poss)
         return res
         
-
     s = min(([i for i in poss if len(i) != 1]), key=len)
     x = poss.index(s)
-    
-    if(s == set()):
-        return
+
     for y in s:
         new_poss = filter_perms(perms, list(poss), x, y)
         res = calculate_trafos(perms, new_poss, res)
@@ -52,20 +49,20 @@ def calculate_trafos(perms, poss, res):
 
 def filter_perms(perms, poss, x, y):
     for i in perms:
+        s = set()
+        for k in i:
+            if(k[0] == y):
+                s.add(k[1])
+            elif(k[1] == y):
+                s.add(k[0])
+            else:
+                continue
         for j in i:    
             if(j[0] == x):
-                x2 = j[1]
+                z = j[1]
             elif(j[1] == x):
-                x2 = j[0]
+                z = j[0]
             else: 
                 continue
-            s = set()
-            for k in i:
-                if(k[0] == y):
-                    s.add(k[1])
-                elif(k[1] == y):
-                    s.add(k[0])
-                else:
-                    continue
-            poss[x2] = poss[x2].intersection(s)
+            poss[z] = poss[z].intersection(s)
     return poss
