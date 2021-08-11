@@ -8,26 +8,13 @@ def find_trafos(coeff, accuracy):
         for j in i:
             coeff_vals.add(j)
     # coeff_perms: each entry contains the edges with same correlation
-    # poss: entry i is set of all possible rho(i) based on coeff_perms
     coeff_perms = []
-    poss_temp = []
-    poss = []
     for i in coeff_vals:
         s = np.argwhere(coeff == i)
-        coeff_perms.append([j for j in s if j[0] <= j[1]])
-        # this is used to create poss, taking number of occurances into account
-        # alterantively, the next 7 lines can simply be replaced by:
-        # poss_temp.append(set(s.flatten()))
-        unique, counts = np.unique([j for j in s if j[0] <= j[1]], return_counts=True)
-        for j in set(counts):
-            t = set()
-            for k in range(len(unique)):
-                if counts[k] == j:
-                    t.add(unique[k])
-            poss_temp.append(t)
-        
-    for i in range(np.shape(coeff)[0]):
-        poss.append(set.intersection(*[j for j in poss_temp if i in j]))
+        coeff_perms.append([j for j in s if j[0] <= j[1]])        
+    # poss: entry i is set of all possible rho(i) based on coeff_perms
+    n = np.shape(coeff)[0]
+    poss = [set(range(n))]*n
     # this is where the algorithm starts
     return calculate_trafos(coeff_perms, poss, [])
     
