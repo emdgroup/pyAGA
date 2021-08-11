@@ -32,11 +32,10 @@ def find_trafos(coeff, accuracy):
     return calculate_trafos(coeff_perms, poss, [])
     
 def calculate_trafos(perms, poss, res):
-    poss_min = len(min(poss, key=len))
-    if(poss_min == 0):
-        return res
-    elif(poss_min == 1 and len(max(poss, key=len)) == 1):
+    if(all(len(i) == 1 for i in poss)):
         res.append(poss)
+        return res
+    elif(any(len(i) == 0 for i in poss)):
         return res
         
     s = min(([i for i in poss if len(i) != 1]), key=len)
