@@ -20,7 +20,7 @@ def find_trafos(coeff, accuracy):
     
 def calculate_trafos(perms, poss, res):
     if(all(len(i) == 1 for i in poss)):
-        res.append(poss)
+        res.append([s.pop() for s in poss])
         return res
     elif(any(len(i) == 0 for i in poss)):
         return res
