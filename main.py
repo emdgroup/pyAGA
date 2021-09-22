@@ -1,14 +1,55 @@
-import pickle
-import world_builder
-
+from pattern_finder import *
 from transformation_finder import find_trafos
 
-with open("correlation_matrix_10x10_letters_with_f.pickle", "rb") as file:
-    correlation_matrix = pickle.load(file)
-    
-  
-print("2x2 world trafos:", find_trafos(world_builder.two_by_two_coeff, 3),"\n")
+import copy
+import pickle
 
-print("banner trafos:", find_trafos(world_builder.banner_coeff, 3), "\n")
+accuracy = 5
+world_name = "12x7_a_and_other_letter"
+level_bound = 3
+pattern_size = 2
 
-print("from input:", find_trafos(correlation_matrix, 3))
+try:
+    with open("trafos_" + world_name + ".pickle", "rb") as trafos_file:
+        trafos = pickle.load(trafos_file)
+except FileNotFoundError:
+    try:
+        with open("correlation_matrix_" + world_name + ".pickle", "rb") as correlation_matrix_file:
+            with open("trafos_" + world_name + ".pickle", "wb") as trafos_file:
+                correlation_matrix = np.transpose(pickle.load(correlation_matrix_file))
+                trafos = find_trafos(correlation_matrix, accuracy)
+                pickle.dump(trafos, trafos_file)
+    except FileNotFoundError:
+        print("Please provide file correlation_matrix_" + world_name + ".pickle or trafos_" + world_name + ".pickle!")
+        exit(-1)
+
+try:
+    with open("unique_observations_mod_trafos_" + world_name + ".pickle", "rb") as observations_mod_trafos_file:
+        original_observations = pickle.load(observations_mod_trafos_file)
+except FileNotFoundError:
+    try:
+        with open("unique_observations_" + world_name + ".pickle", "rb") as observations_file:
+            with open("unique_observations_mod_trafos_" + world_name + ".pickle", "wb") as observations_mod_trafos_file:
+                observations = np.transpose(pickle.load(observations_file))
+                original_observations = find_observation_representatives(set([tuple(o) for o in observations]), trafos)
+                pickle.dump(original_observations, observations_mod_trafos_file)
+    except FileNotFoundError:
+        print("Please provide file unique_observations_" + world_name + ".pickle or unique_observations_mod_trafos_"
+              + world_name + ".pickle!")
+        exit(-1)
+
+original_size = 252 # 12 * 7 *3
+
+basic_patterns = [{i} for i in range(original_size)]
+
+level = 0
+while True:
+    print("level " + str(level) + "...")
+    observations = copy.deepcopy(original_observations)
+    with open("plotting_data_lvl_" + str(level) + ".txt", "w") as output:
+        output.write('dimensions = (1, 12, 7); color_depth = 3; columns = 3; mode = "given_data";\n')
+        basic_patterns = find_basic_patterns(pattern_size, observations, trafos, output, basic_patterns, original_size)
+    print("level completed")
+    level += 1
+    if level == level_bound:
+        break
