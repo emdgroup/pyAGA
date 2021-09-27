@@ -46,13 +46,16 @@ except IndexError:
 
 basic_patterns = [{i} for i in range(original_size)]
 
+original_observations = [frozenset([i for i, value in enumerate(observation) if value != 0]) for observation in
+                         original_observations]
+
 level = 0
 while True:
     print("level " + str(level) + "...")
     observations = copy.deepcopy(original_observations)
     with open("plotting_data_lvl_" + str(level) + ".txt", "w") as output:
         output.write('dimensions = (1, 12, 7); color_depth = 3; columns = 3; mode = "given_data";\n')
-        basic_patterns = find_basic_patterns(pattern_size, observations, trafos, output, basic_patterns)
+        basic_patterns = find_basic_patterns(pattern_size, observations, trafos, output, basic_patterns, original_size)
     print("level completed")
     if level == level_bound:
         break
