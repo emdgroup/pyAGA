@@ -4,10 +4,10 @@ from transformation_finder import find_trafos
 import copy
 import pickle
 
-accuracy = 5
 world_name = "12x7_a_and_other_letter"
-level_bound = 3
+trafo_accuracy = 5
 pattern_size = 2
+level_bound = 5
 
 try:
     with open("trafos_" + world_name + ".pickle", "rb") as trafos_file:
@@ -17,7 +17,7 @@ except FileNotFoundError:
         with open("correlation_matrix_" + world_name + ".pickle", "rb") as correlation_matrix_file:
             with open("trafos_" + world_name + ".pickle", "wb") as trafos_file:
                 correlation_matrix = np.transpose(pickle.load(correlation_matrix_file))
-                trafos = find_trafos(correlation_matrix, accuracy)
+                trafos = find_trafos(correlation_matrix, trafo_accuracy)
                 pickle.dump(trafos, trafos_file)
     except FileNotFoundError:
         print("Please provide file correlation_matrix_" + world_name + ".pickle or trafos_" + world_name + ".pickle!")
@@ -38,7 +38,11 @@ except FileNotFoundError:
               + world_name + ".pickle!")
         exit(-1)
 
-original_size = 252 # 12 * 7 *3
+try:
+    original_size = len(original_observations[0])
+except IndexError:
+    print("The list observations you provided is empty!")
+    exit(-1)
 
 basic_patterns = [{i} for i in range(original_size)]
 
@@ -48,8 +52,8 @@ while True:
     observations = copy.deepcopy(original_observations)
     with open("plotting_data_lvl_" + str(level) + ".txt", "w") as output:
         output.write('dimensions = (1, 12, 7); color_depth = 3; columns = 3; mode = "given_data";\n')
-        basic_patterns = find_basic_patterns(pattern_size, observations, trafos, output, basic_patterns, original_size)
+        basic_patterns = find_basic_patterns(pattern_size, observations, trafos, output, basic_patterns)
     print("level completed")
-    level += 1
     if level == level_bound:
         break
+    level += 1
