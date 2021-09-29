@@ -83,17 +83,23 @@ def convert_observation(observation, original_size):
     return converted_observation
 
 
-def find_basic_patterns(size, observations, trafos, output, basic_patterns, original_size):
+def find_basic_patterns(size, observations, trafos, basic_patterns, printing_stuff):
+    original_size = printing_stuff[0]
+    iteration = printing_stuff[1]
+    level = printing_stuff[2]
+    filename = "plotting_data_iteration_" + str(iteration) + "_lvl_" + str(level) + ".txt"
+    with open(filename, "w") as output:
+        output.write('dimensions = (1, 12, 7); color_depth = 3; columns = 3; mode = "given_data";\n')
     np.random.shuffle(observations)
     list_of_gaps = copy.deepcopy(observations)
     new_patterns = set()
     # find initial pattern
     equiv_classes = find_subsets(size, observations[0], basic_patterns, trafos)
     pattern = find_best_pattern(equiv_classes, observations)
-    output.write(', '.join("%s" % i for i in convert_observation(list_of_gaps[0], original_size)) + "\n")
-    output.write(', '.join("%s" % i for i in convert_observation(observations[0], original_size)) + "\n")
-    output.write(', '.join("%s" % i for i in convert_observation(list(pattern)[0], original_size)) + "\n")
-    print("finished first 3")
+    with open(filename, "a") as output:
+        output.write(', '.join("%s" % i for i in convert_observation(list_of_gaps[0], original_size)) + "\n")
+        output.write(', '.join("%s" % i for i in convert_observation(observations[0], original_size)) + "\n")
+        output.write(', '.join("%s" % i for i in convert_observation(list(pattern)[0], original_size)) + "\n")
     new_patterns.add(pattern)
     while True:
         # shuffle observations
@@ -106,15 +112,90 @@ def find_basic_patterns(size, observations, trafos, output, basic_patterns, orig
         gap_index = next((i for i, gaps in enumerate(list_of_gaps) if gaps != set()), None)
         if gap_index is None:
             break
-        print("another iteration")
         observation_with_gaps = list_of_gaps[gap_index]
         observation = observations[gap_index]
         gaps = list_of_gaps[gap_index]
         equiv_classes = find_subsets(size, observation, basic_patterns, trafos, gaps)
         pattern = find_best_pattern_with_gaps(equiv_classes, observations, list_of_gaps)
-        output.write(', '.join("%s" % i for i in convert_observation(observation_with_gaps, original_size)) + "\n")
-        output.write(', '.join("%s" % i for i in convert_observation(observation, original_size)) + "\n")
-        output.write(', '.join("%s" % i for i in convert_observation(list(pattern)[0], original_size)) + "\n")
+        with open(filename, "a") as output:
+            output.write(', '.join("%s" % i for i in convert_observation(observation_with_gaps, original_size)) + "\n")
+            output.write(', '.join("%s" % i for i in convert_observation(observation, original_size)) + "\n")
+            output.write(', '.join("%s" % i for i in convert_observation(list(pattern)[0], original_size)) + "\n")
         new_patterns.add(pattern)
-    new_basic_patterns = list(set().union(*new_patterns))
-    return new_basic_patterns
+    return new_patterns
+
+
+def find_true_patterns(equiv_classes, observations, trafos, original_size):
+    true_patterns = []
+    # for each potential true pattern (mod trafos)....
+    for equiv_class in equiv_classes:
+        # potential partners of pattern under transformations (which are not yet known)
+        pattern_partners = []
+        # have we found a reason why equiv_class cannot be a true pattern (mod trafos)? --> runtime optimizer
+        abort = False
+        # check for each observation which pattern_representatives appear
+        for observation in observations:
+            for pattern in equiv_class:
+                # if pattern doesn't occur in observation, it's irrelevant
+                if pattern.issubset(observation):
+                    potential_partner = checker(observation, pattern, observations, trafos)
+                    if potential_partner == set():
+                        abort = True
+                        break
+                    pattern_partners.append(potential_partner)
+            if abort:
+                break
+        if not abort:
+            if set.intersection(*pattern_partners) != set() and len(pattern_partners) != 1:
+                true_patterns.append(equiv_class)
+    return true_patterns
+
+
+def checker(observation, pattern, observations, trafos):
+    subtracted_observation = observation - pattern
+    # check if subtracted_observation exists in an observation different from 'observation'
+    duplicated_subtracted_observation = [frozenset(trafo[i] for i in subtracted_observation) for trafo in trafos]
+    potential_partners = set()
+    for test_observation in observations:
+        for subtracted_observation in duplicated_subtracted_observation:
+            if subtracted_observation.issubset(test_observation) and test_observation != observation:
+                potential_partners.add(test_observation - subtracted_observation)
+    return potential_partners
+
+
+def remove_true_patterns(observations, true_patterns):
+    for i, observation in enumerate(observations):
+        new_observation = observation
+        for equiv_class in true_patterns:
+            for pattern in equiv_class:
+                if pattern.issubset(observation):
+                    new_observation = new_observation - pattern
+        observations[i] = new_observation
+
+
+
+def find_true_patternset(size, observations, trafos, basic_patterns, original_size):
+    true_patterns = []
+    iteration = 0
+    with open("true_patterns.txt", "w") as output:
+        output.write('dimensions = (1, 12, 7); color_depth = 3; columns = 4; mode = "given_data"; height = 1000;\n')
+    while not all([i == set() for i in observations]):
+        print("ITERATION: " + str(iteration))
+        level = 0
+        while True:
+            print("level " + str(level) + "...")
+            new_patterns = find_basic_patterns(size, observations, trafos, basic_patterns, (original_size, iteration, level))
+            true_patterns = find_true_patterns(new_patterns, observations, trafos, original_size)
+            if true_patterns != []:
+                print(str(len(true_patterns)) + " true pattern(s) found!")
+                with open("true_patterns.txt", "a") as output:
+                    for equiv_class in true_patterns:
+                        output.write(', '.join("%s" % i for i in convert_observation(list(equiv_class)[0], original_size)) + "\n")
+                remove_true_patterns(observations, true_patterns)
+                basic_patterns = [{i} for i in range(original_size)]
+                iteration += 1
+                break
+            else:
+                level += 1
+                basic_patterns = list(set().union(*new_patterns))
+
