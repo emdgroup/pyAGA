@@ -26,32 +26,34 @@ def hash_array(arr):
     return tuple(np.nonzero(arr.flatten())[0])
 
 
-def create_permutation_combination_constraints(m, id, n_nodes, all_permutations, level, already_added, fullprod=id, last_choice=-1, fullstr='id'):
-    repr = hash_array(fullprod)
-    assert len(repr) == n_nodes
+def create_permutation_combination_constraints(m, all_permutations, level, already_added, current_prod, previous_choice=-1, name='id'):
+    # TODO: should focus on adding short products first (might need conversion of the recursion to iteration),
+    # so that skipping of already added transformations happens more early. This should allow to omit the bound
+    # on level completely
+    repr = hash_array(current_prod)
+    assert len(repr) == current_prod.shape[0]
+    assert current_prod.shape[0] == current_prod.shape[1]
 
     try:
-        print(f'Skipping [{fullstr}] == [{already_added[repr]}]')
+        print(f'Skipping [{name}] == [{already_added[repr]}]')
     except KeyError:
-        print(f'Adding Constraint for [{fullstr}]')
-        m.knownPermutations.add(expr=sum(m.P[tuple(ij)] for ij in np.argwhere(fullprod)) <= n_nodes - 1)
-        already_added[repr] = fullstr
+        print(f'Adding Constraint for [{name}]')
+        m.knownPermutations.add(expr=sum(m.P[tuple(ij)] for ij in np.argwhere(current_prod)) <= current_prod.shape[0] - 1)
+        already_added[repr] = name
 
         if level >= 0:
             for ip, permutation in enumerate(all_permutations):
-                if ip == last_choice:
+                if ip == previous_choice:
                     continue
                 for p, power in enumerate(permutation):
                     create_permutation_combination_constraints(
                         m=m,
-                        id=id,
-                        n_nodes=n_nodes,
                         all_permutations=all_permutations,
                         level=level-1,
                         already_added=already_added,
-                        fullprod=fullprod@power,
-                        last_choice=ip,
-                        fullstr=f'{fullstr} P_{ip}^{p+1}',
+                        current_prod=current_prod@power,
+                        previous_choice=ip,
+                        name=f'{name} P_{ip}^{p+1}',
                     )
 
 
@@ -131,12 +133,10 @@ def main():
         model.knownPermutations = po.ConstraintList()
         create_permutation_combination_constraints(
             m=model,
-            id=id,
-            n_nodes=n_nodes,
             all_permutations=all_permutations,
             level=5,
             already_added=dict(),
-            fullprod=id,
+            current_prod=id,
         )
         print(f'Created {len(model.knownPermutations)} constraints.')
 
