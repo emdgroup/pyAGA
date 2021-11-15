@@ -58,7 +58,7 @@ def create_permutation_combination_constraints(m, all_permutations, level, alrea
 
 
 def main():
-    with open('one_letter_words_5x5_concurrence_matrix_100.pickle', 'rb') as f:
+    with open('data/one_letter_words_5x5_concurrence_matrix_100.pickle', 'rb') as f:
         A = pickle.load(f)
 
     assert A.ndim == 2
