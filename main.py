@@ -22,15 +22,20 @@ def matshow(v):
         print(line)
 
 
-def create_permutation_combination_constraints(m, id, n_nodes, fullprod, all_permutations, level, last_choice=-1, fullstr=''):
-    is_identity = np.allclose(fullprod, id)
+def hash_array(arr):
+    return tuple(np.nonzero(arr.flatten())[0])
 
-    if last_choice != -1 and is_identity:
-        print(f'Skipping Id = {fullstr}')
-    else:
-        if not is_identity:
-            print(f'Adding Constraint for {fullstr}')
-            m.knownPermutations.add(expr=sum(m.P[tuple(ij)] for ij in np.argwhere(fullprod)) <= n_nodes - 1)
+
+def create_permutation_combination_constraints(m, id, n_nodes, all_permutations, level, already_added, fullprod=id, last_choice=-1, fullstr='id'):
+    repr = hash_array(fullprod)
+    assert len(repr) == n_nodes
+
+    try:
+        print(f'Skipping [{fullstr}] == [{already_added[repr]}]')
+    except KeyError:
+        print(f'Adding Constraint for [{fullstr}]')
+        m.knownPermutations.add(expr=sum(m.P[tuple(ij)] for ij in np.argwhere(fullprod)) <= n_nodes - 1)
+        already_added[repr] = fullstr
 
         if level >= 0:
             for ip, permutation in enumerate(all_permutations):
@@ -38,7 +43,16 @@ def create_permutation_combination_constraints(m, id, n_nodes, fullprod, all_per
                     continue
                 for p, power in enumerate(permutation):
                     create_permutation_combination_constraints(
-                        m, id, n_nodes, fullprod@power, all_permutations, level-1, ip, f'{fullstr} P_{ip}^{p+1}')
+                        m=m,
+                        id=id,
+                        n_nodes=n_nodes,
+                        all_permutations=all_permutations,
+                        level=level-1,
+                        already_added=already_added,
+                        fullprod=fullprod@power,
+                        last_choice=ip,
+                        fullstr=f'{fullstr} P_{ip}^{p+1}',
+                    )
 
 
 def main():
@@ -81,14 +95,15 @@ def main():
     print('Creating Constraint to Limit Negative Deviation')
     model.negDev = po.Constraint(model.N, model.N, rule=lambda m, i, j: -m.T[i, j] <= deviation(m, i, j))
 
-    print('Creating Constraint to Exclude Identity')
-    model.identityConstraint = po.Constraint(expr=sum(model.P[i, i] for i in range(n_nodes)) <= n_nodes - 1)
+    # Will be excluded below anyway
+    # print('Creating Constraint to Exclude Identity')
+    # model.identityConstraint = po.Constraint(expr=sum(model.P[i, i] for i in range(n_nodes)) <= n_nodes - 1)
 
     model.knownPermutations = po.ConstraintList()
 
-    id = np.eye(n_nodes)
+    id = np.eye(n_nodes, dtype=int)
 
-    found_transformations = []
+    all_permutations = []
 
     for i_result in count(0):
         print('Solving using glpk')
@@ -108,13 +123,21 @@ def main():
             if np.allclose(power, id):
                 break
 
-        found_transformations.append(all_powers)
+        all_permutations.append(all_powers)
 
         print('Creating Constraints to Exclude Known Solutions, their Powers and their Combinatorial Products')
         model.del_component(model.knownPermutations)
         model.del_component(model.knownPermutations_index)
         model.knownPermutations = po.ConstraintList()
-        create_permutation_combination_constraints(model, id, n_nodes, id, found_transformations, 4)
+        create_permutation_combination_constraints(
+            m=model,
+            id=id,
+            n_nodes=n_nodes,
+            all_permutations=all_permutations,
+            level=5,
+            already_added=dict(),
+            fullprod=id,
+        )
         print(f'Created {len(model.knownPermutations)} constraints.')
 
     #print('Creating Solver using MindtPy')
