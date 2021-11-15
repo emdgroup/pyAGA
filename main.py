@@ -1,11 +1,21 @@
 import pickle
+from enum import Enum
 from itertools import count
+
+from typing import Tuple
 
 import numpy as np
 import pyomo.environ as po
 
 
-def to_ndarray(v, m, n, dtype=int):
+class Norm(Enum):
+    L0 = 0
+    L1 = 1
+    L2 = 2
+
+
+def to_ndarray(v, m, n, dtype=int) -> np.ndarray:
+    # Convert pyomo variable to numpy array
     result = np.zeros((m, n), dtype=dtype)
     for i in range(m):
         for j in range(n):
@@ -13,7 +23,8 @@ def to_ndarray(v, m, n, dtype=int):
     return result
 
 
-def matshow(v):
+def matshow(v: np.ndarray):
+    # Print ASCII-art of the matrix
     for row in v:
         line = '|'
         for col in row:
@@ -22,7 +33,10 @@ def matshow(v):
         print(line)
 
 
-def hash_array(arr):
+def hash_array(arr: np.ndarray) -> Tuple[int]:
+    # Create a tuple with the indices of nonzero entries in arr
+    # This is unique for each permuation matrix and can be used
+    # e.g. as a key in a dict
     return tuple(np.nonzero(arr.flatten())[0])
 
 
@@ -57,59 +71,82 @@ def create_permutation_combination_constraints(m, all_permutations, level, alrea
                     )
 
 
-def main():
-    with open('data/one_letter_words_5x5_concurrence_matrix_100.pickle', 'rb') as f:
-        A = pickle.load(f)
+def find_permutations(A: np.ndarray, norm: Norm):
 
     assert A.ndim == 2
     assert A.shape[0] == A.shape[1]
+    assert isinstance(norm, Norm)
 
     n_nodes = A.shape[0]
 
     model = po.ConcreteModel()
     model.N = po.Set(initialize=range(n_nodes))
 
-    print('Creating Solver using glpk')
-    solver = po.SolverFactory('glpk')
+    if norm == Norm.L2:
+        print('Creating Solver using MindtPy')
+        solver = po.SolverFactory('mindtpy')
+    else:
+        print('Creating Solver using glpk')
+        solver = po.SolverFactory('glpk')
 
     print('Creating Parameter for Concurrence Matrix')
-    model.A = po.Param(model.N, model.N, initialize=A)  # , within=po.Reals)
+    model.A = po.Param(model.N, model.N, initialize=A, within=po.Any)
 
     print('Creating Boolean Permutation Matrix')
     model.P = po.Var(model.N, model.N, within=po.Boolean)
-
-    print('Creating Upper Limit Variables for the Pointwise Error')
-    model.T = po.Var(model.N, model.N, within=po.NonNegativeReals)
 
     print('Creating Row Sum Constraint for the Permutation Matrix')
     model.rowSum = po.Constraint(model.N, rule=lambda m, i: 1 == sum(m.P[i, j] for j in m.N))
     print('Creating Column Sum Constraint for the Permutation Matrix')
     model.colSum = po.Constraint(model.N, rule=lambda m, j: 1 == sum(m.P[i, j] for i in m.N))
 
-    print('Creating Objective Function')
-    model.objective = po.Objective(expr=sum(model.T[i, j] for j in model.N for i in model.N), sense=po.minimize)
-
     def deviation(m, i, j):
         return sum(m.P[i, k]*A[k, j] for k in m.N) - sum(A[i, k]*m.P[k, j] for k in m.N)
 
-    print('Creating Constraint to Limit Positive Deviation')
-    model.posDev = po.Constraint(model.N, model.N, rule=lambda m, i, j: deviation(m, i, j) <= m.T[i, j])
-    print('Creating Constraint to Limit Negative Deviation')
-    model.negDev = po.Constraint(model.N, model.N, rule=lambda m, i, j: -m.T[i, j] <= deviation(m, i, j))
+    if norm == Norm.L0:
+        print('Creating Upper Limit Variable for the Maximum Error')
+        model.T = po.Var(within=po.NonNegativeReals)
 
-    # Will be excluded below anyway
-    # print('Creating Constraint to Exclude Identity')
-    # model.identityConstraint = po.Constraint(expr=sum(model.P[i, i] for i in range(n_nodes)) <= n_nodes - 1)
+        print('Creating Objective Function to Minimize L0 Norm of Deviation')
+        model.objective = po.Objective(expr=model.T, sense=po.minimize)
+
+        print('Creating Constraint to Limit Positive Deviation')
+        model.posDev = po.Constraint(model.N, model.N, rule=lambda m, i, j: deviation(m, i, j) <= m.T)
+        print('Creating Constraint to Limit Negative Deviation')
+        model.negDev = po.Constraint(model.N, model.N, rule=lambda m, i, j: -m.T <= deviation(m, i, j))
+    elif norm == Norm.L1:
+        print('Creating Upper Limit Variables for the Pointwise Error')
+        model.T = po.Var(model.N, model.N, within=po.NonNegativeReals)
+
+        print('Creating Objective Function to Minimize L1 Norm of Deviation')
+        model.objective = po.Objective(expr=sum(model.T[i, j] for j in model.N for i in model.N), sense=po.minimize)
+
+        print('Creating Constraint to Limit Positive Deviation')
+        model.posDev = po.Constraint(model.N, model.N, rule=lambda m, i, j: deviation(m, i, j) <= m.T[i, j])
+        print('Creating Constraint to Limit Negative Deviation')
+        model.negDev = po.Constraint(model.N, model.N, rule=lambda m, i, j: -m.T[i, j] <= deviation(m, i, j))
+    elif norm == Norm.L2:
+        print('Creating Objective Function to Minimize L2 Norm of Deviation')
+        model.objective = po.Objective(rule=lambda m: sum(deviation(m, i, j)**2 for j in m.N for i in m.N), sense=po.minimize)
+    else:
+        raise ValueError(f'Unsupported Norm {norm}.')
 
     model.knownPermutations = po.ConstraintList()
 
     id = np.eye(n_nodes, dtype=int)
 
+    # This will be a list of lists, with the inner lists
+    # containing all powers of an identified permutation
     all_permutations = []
 
     for i_result in count(0):
-        print('Solving using glpk')
-        results = solver.solve(model, tee=True)
+        if norm == Norm.L2:
+            print('Solving using glpk and ipopt')
+            results = solver.solve(model, mip_solver='glpk', nlp_solver='ipopt')
+        else:
+            print('Solving using glpk')
+            results = solver.solve(model, tee=True)
+
         print(results)
 
         permutation = to_ndarray(model.P, n_nodes, n_nodes)
@@ -125,6 +162,7 @@ def main():
             if np.allclose(power, id):
                 break
 
+        print(f'Cycle Length is {len(all_powers) + 1}')
         all_permutations.append(all_powers)
 
         print('Creating Constraints to Exclude Known Solutions, their Powers and their Combinatorial Products')
@@ -140,11 +178,9 @@ def main():
         )
         print(f'Created {len(model.knownPermutations)} constraints.')
 
-    #print('Creating Solver using MindtPy')
-    #solver = po.SolverFactory('mindtpy')
-    #print('Solving using glpk and ipopt')
-    #solver.solve(model, mip_solver='glpk', nlp_solver='ipopt')
-
 
 if __name__ == '__main__':
-    main()
+    with open('data/one_letter_words_5x5_concurrence_matrix_100.pickle', 'rb') as f:
+        A = pickle.load(f)
+
+    find_permutations(A=A, norm=Norm.L1)
