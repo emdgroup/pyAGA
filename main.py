@@ -75,7 +75,7 @@ def create_permutation_combination_constraints(m, all_permutations, id):
                         todo_list.append((current_prod@power, ip, f'{name} P_{ip}^{p+1}'))
 
 
-def find_permutations(A: np.ndarray, norm: Norm, objective_bound=100, glpk_time_limit=-1):
+def find_permutations(A: np.ndarray, norm: Norm, objective_bound=100, glpk_time_limit=None):
 
     assert A.ndim == 2
     assert A.shape[0] == A.shape[1]
@@ -94,8 +94,8 @@ def find_permutations(A: np.ndarray, norm: Norm, objective_bound=100, glpk_time_
     else:
         logger.debug('Creating Solver using glpk')
         solver = po.SolverFactory('glpk')
-        # Set option for time limit and tell him to use a heuristic
-        if glpk_time_limit != -1:
+        # Set option for time limit and instruct to use a heuristic
+        if glpk_time_limit is not None:
             solver.options['tmlim'] = glpk_time_limit
             solver.options['fpump'] = ''
 
