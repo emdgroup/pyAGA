@@ -36,7 +36,7 @@ def matshow(v: np.ndarray):
     for row in v:
         line = '|'
         for col in row:
-            line += ' ' if col == 0 else '#'
+            line += ' ' if col == 0 else str(int(col))
         line += '|'
         logger.info(line)
 
@@ -141,7 +141,7 @@ def find_permutations(A: np.ndarray, norm: Norm, objective_bound=100, glpk_time_
     else:
         raise ValueError(f'Unsupported Norm {norm}.')
 
-    logger.debug(f'Finished creation of model in {time.time()-start_time} seconds.')
+    logger.debug(f'Finished creation of model in {time.time()-start_time:.2f} seconds.')
 
     model.knownPermutations = po.ConstraintList()
 
@@ -193,7 +193,7 @@ def find_permutations(A: np.ndarray, norm: Norm, objective_bound=100, glpk_time_
         create_permutation_combination_constraints(m=model, all_permutations=all_permutations, id=id)
         logger.info(f'Created {len(model.knownPermutations)} constraints.')
 
-        logger.debug(f'Iteration {i_result+1} finished in {time.time()-iteration_start} seconds.')
+        logger.debug(f'Iteration {i_result+1} finished in {time.time()-iteration_start:.2f} seconds.')
 
 
 if __name__ == '__main__':
