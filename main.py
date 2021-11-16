@@ -7,8 +7,8 @@ from typing import Tuple
 import numpy as np
 import pyomo.environ as po
 
-# This is not the best comment in the world.
-# This is just a tribute.
+# This is in fact the very best comment that has ever existed.
+# This is so much more than just a tribute.
 
 class Norm(Enum):
     L0 = 0
