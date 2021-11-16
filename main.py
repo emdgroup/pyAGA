@@ -110,6 +110,9 @@ def find_permutations(A: np.ndarray, norm: Norm, objective_bound=100, glpk_time_
     logger.debug('Creating Column Sum Constraint for the Permutation Matrix')
     model.colSum = po.Constraint(model.N, rule=lambda m, j: 1 == sum(m.P[i, j] for i in m.N))
 
+    print('Creating Constraint to Exclude Identity')
+    logger.debug.identityConstraint = po.Constraint(expr=sum(model.P[i, i] for i in range(n_nodes)) <= n_nodes - 1)
+
     def deviation(m, i, j):
         return sum(m.P[i, k]*A[k, j] for k in m.N) - sum(A[i, k]*m.P[k, j] for k in m.N)
 
