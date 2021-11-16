@@ -8,6 +8,9 @@ from typing import Tuple
 import numpy as np
 import pyomo.environ as po
 
+# This is not the best comment in the world.
+# This is just a tribute. 
+# Couldn't remember the greatest comment in the world, yeah - no!
 
 class Norm(Enum):
     L0 = 0
