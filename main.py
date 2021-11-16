@@ -7,6 +7,8 @@ from typing import Tuple
 import numpy as np
 import pyomo.environ as po
 
+# This is not the best comment in the world.
+# This is just a tribute.
 
 class Norm(Enum):
     L0 = 0
