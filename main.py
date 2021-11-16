@@ -2,12 +2,17 @@ import pickle
 from enum import Enum
 from collections import deque
 from itertools import count
+import logging
 
 from typing import Tuple
 
 import numpy as np
 import pyomo.environ as po
 import time
+
+logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s')
+logger = logging.getLogger(__file__)
+logger.setLevel(level=logging.DEBUG)  # set to logging.INFO vor less verbosity
 
 
 class Norm(Enum):
@@ -33,7 +38,7 @@ def matshow(v: np.ndarray):
         for col in row:
             line += ' ' if col == 0 else '#'
         line += '|'
-        print(line)
+        logger.info(line)
 
 
 def hash_array(arr: np.ndarray) -> Tuple[int]:
@@ -57,9 +62,9 @@ def create_permutation_combination_constraints(m, all_permutations, id):
         assert current_prod.shape[0] == current_prod.shape[1]
 
         try:
-            print(f'Skipping [{name}] == [{already_added[repr]}]')
+            logger.info(f'Skipping [{name}] == [{already_added[repr]}]')
         except KeyError:
-            print(f'Adding Constraint for [{name}]')
+            logger.info(f'Adding Constraint for [{name}]')
             m.knownPermutations.add(expr=sum(m.P[tuple(ij)] for ij in np.argwhere(current_prod)) <= current_prod.shape[0] - 1)
             already_added[repr] = name
 
@@ -70,7 +75,7 @@ def create_permutation_combination_constraints(m, all_permutations, id):
                         todo_list.append((current_prod@power, ip, f'{name} P_{ip}^{p+1}'))
 
 
-def find_permutations(A: np.ndarray, norm: Norm, objective_bound=100, track_time=False, glpk_time_limit=-1):
+def find_permutations(A: np.ndarray, norm: Norm, objective_bound=100, glpk_time_limit=-1):
 
     assert A.ndim == 2
     assert A.shape[0] == A.shape[1]
@@ -78,67 +83,65 @@ def find_permutations(A: np.ndarray, norm: Norm, objective_bound=100, track_time
 
     n_nodes = A.shape[0]
 
-    if track_time:
-        start_time = time.time()
+    start_time = time.time()
 
     model = po.ConcreteModel()
     model.N = po.Set(initialize=range(n_nodes))
 
     if norm == Norm.L2:
-        print('Creating Solver using MindtPy')
+        logger.debug('Creating Solver using MindtPy')
         solver = po.SolverFactory('mindtpy')
     else:
-        print('Creating Solver using glpk')
+        logger.debug('Creating Solver using glpk')
         solver = po.SolverFactory('glpk')
         # Set option for time limit and tell him to use a heuristic
         if glpk_time_limit != -1:
             solver.options['tmlim'] = glpk_time_limit
             solver.options['fpump'] = ''
 
-    print('Creating Parameter for Concurrence Matrix')
+    logger.debug('Creating Parameter for Concurrence Matrix')
     model.A = po.Param(model.N, model.N, initialize=A, within=po.Any)
 
-    print('Creating Boolean Permutation Matrix')
+    logger.debug('Creating Boolean Permutation Matrix')
     model.P = po.Var(model.N, model.N, within=po.Boolean)
 
-    print('Creating Row Sum Constraint for the Permutation Matrix')
+    logger.debug('Creating Row Sum Constraint for the Permutation Matrix')
     model.rowSum = po.Constraint(model.N, rule=lambda m, i: 1 == sum(m.P[i, j] for j in m.N))
-    print('Creating Column Sum Constraint for the Permutation Matrix')
+    logger.debug('Creating Column Sum Constraint for the Permutation Matrix')
     model.colSum = po.Constraint(model.N, rule=lambda m, j: 1 == sum(m.P[i, j] for i in m.N))
 
     def deviation(m, i, j):
         return sum(m.P[i, k]*A[k, j] for k in m.N) - sum(A[i, k]*m.P[k, j] for k in m.N)
 
     if norm == Norm.L0:
-        print('Creating Upper Limit Variable for the Maximum Error')
+        logger.debug('Creating Upper Limit Variable for the Maximum Error')
         model.T = po.Var(within=po.NonNegativeReals)
 
-        print('Creating Objective Function to Minimize L0 Norm of Deviation')
+        logger.debug('Creating Objective Function to Minimize L0 Norm of Deviation')
         model.objective = po.Objective(expr=model.T, sense=po.minimize)
 
-        print('Creating Constraint to Limit Positive Deviation')
+        logger.debug('Creating Constraint to Limit Positive Deviation')
         model.posDev = po.Constraint(model.N, model.N, rule=lambda m, i, j: deviation(m, i, j) <= m.T)
-        print('Creating Constraint to Limit Negative Deviation')
+        logger.debug('Creating Constraint to Limit Negative Deviation')
         model.negDev = po.Constraint(model.N, model.N, rule=lambda m, i, j: -m.T <= deviation(m, i, j))
     elif norm == Norm.L1:
-        print('Creating Upper Limit Variables for the Pointwise Error')
+        logger.debug('Creating Upper Limit Variables for the Pointwise Error')
         model.T = po.Var(model.N, model.N, within=po.NonNegativeReals)
 
-        print('Creating Objective Function to Minimize L1 Norm of Deviation')
+        logger.debug('Creating Objective Function to Minimize L1 Norm of Deviation')
         model.objective = po.Objective(expr=sum(model.T[i, j] for j in model.N for i in model.N), sense=po.minimize)
 
-        print('Creating Constraint to Limit Positive Deviation')
+        logger.debug('Creating Constraint to Limit Positive Deviation')
         model.posDev = po.Constraint(model.N, model.N, rule=lambda m, i, j: deviation(m, i, j) <= m.T[i, j])
-        print('Creating Constraint to Limit Negative Deviation')
+        logger.debug('Creating Constraint to Limit Negative Deviation')
         model.negDev = po.Constraint(model.N, model.N, rule=lambda m, i, j: -m.T[i, j] <= deviation(m, i, j))
     elif norm == Norm.L2:
-        print('Creating Objective Function to Minimize L2 Norm of Deviation')
+        logger.debug('Creating Objective Function to Minimize L2 Norm of Deviation')
         model.objective = po.Objective(rule=lambda m: sum(deviation(m, i, j)**2 for j in m.N for i in m.N), sense=po.minimize)
     else:
         raise ValueError(f'Unsupported Norm {norm}.')
 
-    if track_time:
-        print(f'Finished creation of model in {time.time()-start_time} seconds.')
+    logger.debug(f'Finished creation of model in {time.time()-start_time} seconds.')
 
     model.knownPermutations = po.ConstraintList()
 
@@ -152,27 +155,26 @@ def find_permutations(A: np.ndarray, norm: Norm, objective_bound=100, track_time
     # Used such that calculation stops once sufficiently bad solution was found
     last_objective = -1
     for i_result in count(0):
-        if track_time:
-            iteration_start = time.time()
+        iteration_start = time.time()
 
         if norm == Norm.L2:
-            print('Solving using glpk and ipopt')
+            logger.debug('Solving using glpk and ipopt')
             results = solver.solve(model, mip_solver='glpk', nlp_solver='ipopt')
         else:
-            print('Solving using glpk')
-            results = solver.solve(model, tee=True)
+            logger.debug('Solving using glpk')
+            results = solver.solve(model, tee=logger.getEffectiveLevel() == logging.DEBUG)
 
-        print(results)
+        logger.info('Solver Result:\n' + str(results))
         last_objective = model.objective.expr()
         if last_objective >= objective_bound:
-            print('Current objective value exceeds the given bound; calculation is stopped')
+            logger.warning('Current objective value exceeds the given bound; calculation is stopped')
             break
 
         permutation = to_ndarray(model.P, n_nodes, n_nodes)
-        print(f'P_{i_result} =')
+        logger.info(f'P_{i_result} =')
         matshow(permutation)
 
-        print(f'Computing Cycle of Solution P_{i_result}')
+        logger.debug(f'Computing Cycle of Solution P_{i_result}')
         all_powers = []
         power = permutation.copy()
         while True:
@@ -181,22 +183,21 @@ def find_permutations(A: np.ndarray, norm: Norm, objective_bound=100, track_time
             if np.allclose(power, id):
                 break
 
-        print(f'Cycle Length is {len(all_powers) + 1}')
+        logger.info(f'Cycle Length is {len(all_powers) + 1}')
         all_permutations.append(all_powers)
 
-        print('Creating Constraints to Exclude Known Solutions, their Powers and their Combinatorial Products')
+        logger.debug('Creating Constraints to Exclude Known Solutions, their Powers and their Combinatorial Products')
         model.del_component(model.knownPermutations)
         model.del_component(model.knownPermutations_index)
         model.knownPermutations = po.ConstraintList()
         create_permutation_combination_constraints(m=model, all_permutations=all_permutations, id=id)
-        print(f'Created {len(model.knownPermutations)} constraints.')
+        logger.info(f'Created {len(model.knownPermutations)} constraints.')
 
-        if track_time:
-            print(f'Iteration {i_result+1} finished in {time.time()-iteration_start} seconds.')
+        logger.debug(f'Iteration {i_result+1} finished in {time.time()-iteration_start} seconds.')
 
 
 if __name__ == '__main__':
     with open('data/one_letter_words_5x5_concurrence_matrix_100.pickle', 'rb') as f:
         A = pickle.load(f)
 
-    find_permutations(A=A, norm=Norm.L1, objective_bound=0.01, track_time=True, glpk_time_limit=180)
+    find_permutations(A=A, norm=Norm.L1, objective_bound=0.01, glpk_time_limit=180)
