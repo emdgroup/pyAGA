@@ -1,5 +1,6 @@
 import pickle
 from enum import Enum
+from collections import deque
 from itertools import count
 
 from typing import Tuple
@@ -41,35 +42,31 @@ def hash_array(arr: np.ndarray) -> Tuple[int]:
     return tuple(np.nonzero(arr.flatten())[0])
 
 
-def create_permutation_combination_constraints(m, all_permutations, level, already_added, current_prod, previous_choice=-1, name='id'):
-    # TODO: should focus on adding short products first (might need conversion of the recursion to iteration),
-    # so that skipping of already added transformations happens more early. This should allow to omit the bound
-    # on level completely
-    repr = hash_array(current_prod)
-    assert len(repr) == current_prod.shape[0]
-    assert current_prod.shape[0] == current_prod.shape[1]
+def create_permutation_combination_constraints(m, all_permutations, max_level, id):
+    already_added = dict()
+    todo_list = deque()
+    todo_list.append((id, -1, 'id', max_level))
 
-    try:
-        print(f'Skipping [{name}] == [{already_added[repr]}]')
-    except KeyError:
-        print(f'Adding Constraint for [{name}]')
-        m.knownPermutations.add(expr=sum(m.P[tuple(ij)] for ij in np.argwhere(current_prod)) <= current_prod.shape[0] - 1)
-        already_added[repr] = name
+    while len(todo_list) > 0:
+        current_prod, previous_choice, name, level = todo_list.popleft()
 
-        if level >= 0:
-            for ip, permutation in enumerate(all_permutations):
-                if ip == previous_choice:
-                    continue
-                for p, power in enumerate(permutation):
-                    create_permutation_combination_constraints(
-                        m=m,
-                        all_permutations=all_permutations,
-                        level=level-1,
-                        already_added=already_added,
-                        current_prod=current_prod@power,
-                        previous_choice=ip,
-                        name=f'{name} P_{ip}^{p+1}',
-                    )
+        repr = hash_array(current_prod)
+        assert len(repr) == current_prod.shape[0]
+        assert current_prod.shape[0] == current_prod.shape[1]
+
+        try:
+            print(f'Skipping [{name}] == [{already_added[repr]}]')
+        except KeyError:
+            print(f'Adding Constraint for [{name}]')
+            m.knownPermutations.add(expr=sum(m.P[tuple(ij)] for ij in np.argwhere(current_prod)) <= current_prod.shape[0] - 1)
+            already_added[repr] = name
+
+            if level >= 0:
+                for ip, permutation in enumerate(all_permutations):
+                    if ip == previous_choice:
+                        continue
+                    for p, power in enumerate(permutation):
+                        todo_list.append((current_prod@power, ip, f'{name} P_{ip}^{p+1}', level-1))
 
 
 def find_permutations(A: np.ndarray, norm: Norm):
@@ -170,13 +167,7 @@ def find_permutations(A: np.ndarray, norm: Norm):
         model.del_component(model.knownPermutations)
         model.del_component(model.knownPermutations_index)
         model.knownPermutations = po.ConstraintList()
-        create_permutation_combination_constraints(
-            m=model,
-            all_permutations=all_permutations,
-            level=5,
-            already_added=dict(),
-            current_prod=id,
-        )
+        create_permutation_combination_constraints(m=model, all_permutations=all_permutations, max_level=5, id=id)
         print(f'Created {len(model.knownPermutations)} constraints.')
 
 
