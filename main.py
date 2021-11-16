@@ -197,7 +197,9 @@ def find_permutations(A: np.ndarray, norm: Norm, objective_bound=100, glpk_time_
 
 
 if __name__ == '__main__':
-    with open('data/one_letter_words_5x5_concurrence_matrix_100.pickle', 'rb') as f:
+    filename = 'data/one_letter_words_5x5_concurrence_matrix_100.pickle'
+    logger.info(f'Loading file {filename}')
+    with open(filename, 'rb') as f:
         A = pickle.load(f)
 
     find_permutations(A=A, norm=Norm.L1, objective_bound=0.01, glpk_time_limit=180)
