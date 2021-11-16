@@ -100,7 +100,7 @@ def find_permutations(A: np.ndarray, norm: Norm, objective_bound=100, glpk_time_
             solver.options['fpump'] = ''
 
     logger.debug('Creating Parameter for Concurrence Matrix')
-    model.A = po.Param(model.N, model.N, initialize=A, within=po.Any)
+    model.A = po.Param(model.N, model.N, initialize=lambda m, i, j: A[i, j], within=po.Reals)
 
     logger.debug('Creating Boolean Permutation Matrix')
     model.P = po.Var(model.N, model.N, within=po.Boolean)
@@ -114,7 +114,7 @@ def find_permutations(A: np.ndarray, norm: Norm, objective_bound=100, glpk_time_
     model.identityConstraint = po.Constraint(expr=sum(model.P[i, i] for i in range(n_nodes)) <= n_nodes - 1)
 
     def deviation(m, i, j):
-        return sum(m.P[i, k]*A[k, j] for k in m.N) - sum(A[i, k]*m.P[k, j] for k in m.N)
+        return sum(m.P[i, k]*m.A[k, j] for k in m.N) - sum(m.A[i, k]*m.P[k, j] for k in m.N)
 
     if norm == Norm.L0:
         logger.debug('Creating Upper Limit Variable for the Maximum Error')
