@@ -7,7 +7,6 @@ from typing import Tuple
 import numpy as np
 import pyomo.environ as po
 
-# This is a test comment made by Alex to see if I can commit properly
 
 class Norm(Enum):
     L0 = 0
