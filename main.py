@@ -7,8 +7,14 @@ from typing import Tuple
 import numpy as np
 import pyomo.environ as po
 
+<<<<<<< HEAD
 # This is in fact the very best comment that has ever existed.
 # This is so much more than just a tribute.
+=======
+# This is not the best comment in the world.
+# This is just a tribute. 
+# Couldn't remember the greatest comment in the world, yeah - no!
+>>>>>>> 5af6d5d769cbe4e1d1d538bb5286d54450ed42aa
 
 class Norm(Enum):
     L0 = 0
