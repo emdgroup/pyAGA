@@ -7,6 +7,7 @@ from typing import Tuple
 
 import numpy as np
 import pyomo.environ as po
+import time
 
 
 class Norm(Enum):
@@ -42,6 +43,7 @@ def hash_array(arr: np.ndarray) -> Tuple[int]:
     return tuple(np.nonzero(arr.flatten())[0])
 
 
+# TODO: Calculate level properly (lcm of cycle lengths or something similar?)
 def create_permutation_combination_constraints(m, all_permutations, id):
     already_added = dict()
     todo_list = deque()
@@ -68,13 +70,16 @@ def create_permutation_combination_constraints(m, all_permutations, id):
                         todo_list.append((current_prod@power, ip, f'{name} P_{ip}^{p+1}'))
 
 
-def find_permutations(A: np.ndarray, norm: Norm):
+def find_permutations(A: np.ndarray, norm: Norm, objective_bound=100, track_time=False, glpk_time_limit=-1):
 
     assert A.ndim == 2
     assert A.shape[0] == A.shape[1]
     assert isinstance(norm, Norm)
 
     n_nodes = A.shape[0]
+
+    if track_time:
+        start_time = time.time()
 
     model = po.ConcreteModel()
     model.N = po.Set(initialize=range(n_nodes))
@@ -85,6 +90,10 @@ def find_permutations(A: np.ndarray, norm: Norm):
     else:
         print('Creating Solver using glpk')
         solver = po.SolverFactory('glpk')
+        # Set option for time limit and tell him to use a heuristic
+        if glpk_time_limit != -1:
+            solver.options['tmlim'] = glpk_time_limit
+            solver.options['fpump'] = ''
 
     print('Creating Parameter for Concurrence Matrix')
     model.A = po.Param(model.N, model.N, initialize=A, within=po.Any)
@@ -128,6 +137,9 @@ def find_permutations(A: np.ndarray, norm: Norm):
     else:
         raise ValueError(f'Unsupported Norm {norm}.')
 
+    if track_time:
+        print(f'Finished creation of model in {time.time()-start_time} seconds.')
+
     model.knownPermutations = po.ConstraintList()
 
     id = np.eye(n_nodes, dtype=int)
@@ -136,7 +148,13 @@ def find_permutations(A: np.ndarray, norm: Norm):
     # containing all powers of an identified permutation
     all_permutations = []
 
+    # Last found objective function value
+    # Used such that calculation stops once sufficiently bad solution was found
+    last_objective = -1
     for i_result in count(0):
+        if track_time:
+            iteration_start = time.time()
+
         if norm == Norm.L2:
             print('Solving using glpk and ipopt')
             results = solver.solve(model, mip_solver='glpk', nlp_solver='ipopt')
@@ -145,6 +163,10 @@ def find_permutations(A: np.ndarray, norm: Norm):
             results = solver.solve(model, tee=True)
 
         print(results)
+        last_objective = model.objective.expr()
+        if last_objective >= objective_bound:
+            print('Current objective value exceeds the given bound; calculation is stopped')
+            break
 
         permutation = to_ndarray(model.P, n_nodes, n_nodes)
         print(f'P_{i_result} =')
@@ -169,9 +191,12 @@ def find_permutations(A: np.ndarray, norm: Norm):
         create_permutation_combination_constraints(m=model, all_permutations=all_permutations, id=id)
         print(f'Created {len(model.knownPermutations)} constraints.')
 
+        if track_time:
+            print(f'Iteration {i_result+1} finished in {time.time()-iteration_start} seconds.')
+
 
 if __name__ == '__main__':
     with open('data/one_letter_words_5x5_concurrence_matrix_100.pickle', 'rb') as f:
         A = pickle.load(f)
 
-    find_permutations(A=A, norm=Norm.L1)
+    find_permutations(A=A, norm=Norm.L1, objective_bound=0.01, track_time=True, glpk_time_limit=180)
