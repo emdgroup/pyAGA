@@ -42,13 +42,13 @@ def hash_array(arr: np.ndarray) -> Tuple[int]:
     return tuple(np.nonzero(arr.flatten())[0])
 
 
-def create_permutation_combination_constraints(m, all_permutations, max_level, id):
+def create_permutation_combination_constraints(m, all_permutations, id):
     already_added = dict()
     todo_list = deque()
-    todo_list.append((id, -1, 'id', max_level))
+    todo_list.append((id, -1, 'id'))
 
     while len(todo_list) > 0:
-        current_prod, previous_choice, name, level = todo_list.popleft()
+        current_prod, previous_choice, name = todo_list.popleft()
 
         repr = hash_array(current_prod)
         assert len(repr) == current_prod.shape[0]
@@ -61,12 +61,11 @@ def create_permutation_combination_constraints(m, all_permutations, max_level, i
             m.knownPermutations.add(expr=sum(m.P[tuple(ij)] for ij in np.argwhere(current_prod)) <= current_prod.shape[0] - 1)
             already_added[repr] = name
 
-            if level >= 0:
-                for ip, permutation in enumerate(all_permutations):
-                    if ip == previous_choice:
-                        continue
+            for ip, permutation in enumerate(all_permutations):
+                # prevent multiplying the same permutation that has just been used before
+                if ip != previous_choice:
                     for p, power in enumerate(permutation):
-                        todo_list.append((current_prod@power, ip, f'{name} P_{ip}^{p+1}', level-1))
+                        todo_list.append((current_prod@power, ip, f'{name} P_{ip}^{p+1}'))
 
 
 def find_permutations(A: np.ndarray, norm: Norm):
@@ -167,7 +166,7 @@ def find_permutations(A: np.ndarray, norm: Norm):
         model.del_component(model.knownPermutations)
         model.del_component(model.knownPermutations_index)
         model.knownPermutations = po.ConstraintList()
-        create_permutation_combination_constraints(m=model, all_permutations=all_permutations, max_level=5, id=id)
+        create_permutation_combination_constraints(m=model, all_permutations=all_permutations, id=id)
         print(f'Created {len(model.knownPermutations)} constraints.')
 
 
