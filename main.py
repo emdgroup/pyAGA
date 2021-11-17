@@ -60,7 +60,7 @@ def hash_array(arr: np.ndarray) -> Tuple[int]:
     return tuple(np.nonzero(arr.flatten())[0])
 
 
-# TODO: Calculate level properly (lcm of cycle lengths or something similar?)
+# TODO: This can probably be optimized later by using SymPy Permutations
 def create_permutation_combination_constraints(m, all_permutations, id):
     already_added = dict()
     todo_list = deque()
@@ -180,6 +180,7 @@ def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, o
     # Last found objective function value
     # Used such that calculation stops once sufficiently bad solution was found
     last_objective = -1
+    previous_permutation = np.zeros((n_nodes,n_nodes))
     for i_result in count(0):
         iteration_start = time.time()
 
@@ -195,6 +196,13 @@ def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, o
         permutation = to_ndarray(model.P, n_nodes, n_nodes)
         logger.info(f'P_{i_result} =')
         matshow(permutation)
+
+        if np.array_equal(permutation,previous_permutation) and glpk_time_limit:
+            logger.debug('The same permutation was found twice; aborting computation')
+            break
+        else:
+            logger.debug('The permutation was not found before; continuing computation')
+            previous_permutation = permutation.copy()
 
         logger.debug(f'Computing Cycle of Solution P_{i_result}')
         all_powers = []
