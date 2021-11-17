@@ -180,12 +180,17 @@ def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, o
     # Last found objective function value
     # Used such that calculation stops once sufficiently bad solution was found
     last_objective = -1
-    previous_permutation = np.zeros((n_nodes,n_nodes))
+    previous_permutation = np.zeros((n_nodes, n_nodes))
     for i_result in count(0):
         iteration_start = time.time()
 
         logger.debug(f'Solving using {solver}')
-        results = ip_solver.solve(model, tee=logger.getEffectiveLevel() == logging.DEBUG, timelimit=time_limit, **solve_params)
+        results = ip_solver.solve(
+            model,
+            tee=logger.getEffectiveLevel() == logging.DEBUG,
+            timelimit=time_limit,
+            report_timing=True,
+            **solve_params)
 
         logger.info('Solver Result:\n' + str(results))
         last_objective = model.objective.expr()
@@ -197,7 +202,7 @@ def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, o
         logger.info(f'P_{i_result} =')
         matshow(permutation)
 
-        if np.array_equal(permutation,previous_permutation) and glpk_time_limit:
+        if np.array_equal(permutation, previous_permutation) and time_limit:
             logger.debug('The same permutation was found twice; aborting computation')
             break
         else:
