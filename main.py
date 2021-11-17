@@ -10,7 +10,7 @@ import numpy as np
 import pyomo.environ as po
 import time
 
-import highs
+import highs  # noqa: F401
 
 logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s')
 logger = logging.getLogger(__file__)
