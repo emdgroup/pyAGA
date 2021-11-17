@@ -124,7 +124,11 @@ class HiGHS_Shell(SystemCallSolver):
         #
         self._options_file = TempfileManager.create_tempfile(suffix='.highs.set')
 
+        # TODO: see https://github.com/ERGO-Code/HiGHS/blob/master/src/lp_data/HighsOptions.h
         options_file_content = dict(
+            log_dev_level=3,
+            log_to_console='true',
+            output_flag='true',
             # Presolve option: "off", "choose" or "on"
             # [type: string, advanced: false, default: "choose"]
             presolve='choose',
@@ -157,7 +161,7 @@ class HiGHS_Shell(SystemCallSolver):
             dual_feasibility_tolerance=1e-07,
             # Debugging level in HiGHS
             # [type: int, advanced: false, range: {0, 3}, default: 0]
-            highs_debug_level=1,
+            highs_debug_level=3,
             # Strategy for simplex solver
             # [type: int, advanced: false, range: {0, 4}, default: 1]
             simplex_strategy=1,
@@ -202,7 +206,7 @@ class HiGHS_Shell(SystemCallSolver):
             mip_max_nodes=2147483647,
             # MIP solver reporting level
             # [type: int, advanced: false, range: {0, 2}, default: 1]
-            mip_report_level=1,
+            mip_report_level=2,
             # Use the free format MPS file reader
             # [type: bool, advanced: true, range: {false, true}, default: true]
             mps_parser_type_free='true',
