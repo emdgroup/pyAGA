@@ -10,6 +10,8 @@ import numpy as np
 import pyomo.environ as po
 import time
 
+import highs  # noqa: F401
+
 logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s')
 logger = logging.getLogger(__file__)
 logger.setLevel(level=logging.DEBUG)  # set to logging.INFO vor less verbosity
@@ -21,14 +23,24 @@ class Norm(Enum):
     L2 = 2
 
 
+class Solver(Enum):
+    GLPK = 0
+    IPOPT = 1
+    HiGHS = 2
+
+
 def to_ndarray(v, m, n, dtype=int) -> np.ndarray:
     # Convert pyomo variable to numpy array
     # TODO: when used for a permutation matrix, this should really be some sparse matrix format
-    result = np.zeros((m, n), dtype=dtype)
+    result = np.zeros((m, n), dtype=float)
     for i in range(m):
         for j in range(n):
             result[i, j] = v[i, j].value
-    return result
+
+    if dtype == int:
+        result = np.around(result)
+
+    return result.astype(dtype)
 
 
 def matshow(v: np.ndarray):
@@ -75,7 +87,7 @@ def create_permutation_combination_constraints(m, all_permutations, id):
                         todo_list.append((current_prod@power, ip, f'{name} P_{ip}^{p+1}'))
 
 
-def find_permutations(A: np.ndarray, norm: Norm, objective_bound=100, glpk_time_limit=None):
+def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, objective_bound=100, time_limit=None):
 
     assert A.ndim == 2
     assert A.shape[0] == A.shape[1]
@@ -88,19 +100,27 @@ def find_permutations(A: np.ndarray, norm: Norm, objective_bound=100, glpk_time_
     model = po.ConcreteModel()
     model.N = po.Set(initialize=range(n_nodes))
 
-    if norm == Norm.L2:
-        logger.debug('Creating Solver using MindtPy')
-        solver = po.SolverFactory('mindtpy')
+    if solver == Solver.GLPK:
+        solver_factory_params = dict(_name='glpk')
+        solver_options = dict(fpump='')
+        solve_params = dict()
+    elif solver == Solver.IPOPT:
+        solver_factory_params = dict(_name='mindtpy')
+        solver_options = dict()
+        solve_params = dict(mip_solver='glpk', nlp_solver='ipopt')
+    elif solver == Solver.HiGHS:
+        solver_factory_params = dict(_name='highs', executable='/Users/m290886/Downloads/HiGHS.v1.1.0.x86_64-apple-darwin/bin/highs')
+        solver_options = dict()
+        solve_params = dict()
     else:
-        logger.debug('Creating Solver using glpk')
-        solver = po.SolverFactory('glpk')
-        # Set option for time limit and instruct to use a heuristic
-        if glpk_time_limit is not None:
-            solver.options['tmlim'] = glpk_time_limit
-            solver.options['fpump'] = ''
+        raise ValueError(f'Unsupported solver {solver}')
+
+    logger.debug(f'Creating Solver using params {solver_factory_params}')
+    ip_solver = po.SolverFactory(**solver_factory_params)
+    ip_solver.options = solver_options
 
     logger.debug('Creating Parameter for Concurrence Matrix')
-    model.A = po.Param(model.N, model.N, initialize=A, within=po.Any)
+    model.A = po.Param(model.N, model.N, initialize=lambda m, i, j: A[i, j], within=po.Reals)
 
     logger.debug('Creating Boolean Permutation Matrix')
     model.P = po.Var(model.N, model.N, within=po.Boolean)
@@ -114,7 +134,7 @@ def find_permutations(A: np.ndarray, norm: Norm, objective_bound=100, glpk_time_
     model.identityConstraint = po.Constraint(expr=sum(model.P[i, i] for i in range(n_nodes)) <= n_nodes - 1)
 
     def deviation(m, i, j):
-        return sum(m.P[i, k]*A[k, j] for k in m.N) - sum(A[i, k]*m.P[k, j] for k in m.N)
+        return sum(m.P[i, k]*m.A[k, j] for k in m.N) - sum(m.A[i, k]*m.P[k, j] for k in m.N)
 
     if norm == Norm.L0:
         logger.debug('Creating Upper Limit Variable for the Maximum Error')
@@ -139,6 +159,7 @@ def find_permutations(A: np.ndarray, norm: Norm, objective_bound=100, glpk_time_
         logger.debug('Creating Constraint to Limit Negative Deviation')
         model.negDev = po.Constraint(model.N, model.N, rule=lambda m, i, j: -m.T[i, j] <= deviation(m, i, j))
     elif norm == Norm.L2:
+        assert solver == Solver.IPOPT
         logger.debug('Creating Objective Function to Minimize L2 Norm of Deviation')
         model.objective = po.Objective(rule=lambda m: sum(deviation(m, i, j)**2 for j in m.N for i in m.N), sense=po.minimize)
     else:
@@ -146,13 +167,15 @@ def find_permutations(A: np.ndarray, norm: Norm, objective_bound=100, glpk_time_
 
     logger.debug(f'Finished creation of model in {time.time()-start_time:.2f} seconds.')
 
-    model.knownPermutations = po.ConstraintList()
-
     id = np.eye(n_nodes, dtype=int)
 
     # This will be a list of lists, with the inner lists
     # containing all powers of an identified permutation
     all_permutations = []
+
+    # Constraint for excluding known permutations and
+    # their products
+    model.knownPermutations = po.ConstraintList()
 
     # Last found objective function value
     # Used such that calculation stops once sufficiently bad solution was found
@@ -161,12 +184,8 @@ def find_permutations(A: np.ndarray, norm: Norm, objective_bound=100, glpk_time_
     for i_result in count(0):
         iteration_start = time.time()
 
-        if norm == Norm.L2:
-            logger.debug('Solving using glpk and ipopt')
-            results = solver.solve(model, mip_solver='glpk', nlp_solver='ipopt')
-        else:
-            logger.debug('Solving using glpk')
-            results = solver.solve(model, tee=logger.getEffectiveLevel() == logging.DEBUG)
+        logger.debug(f'Solving using {solver}')
+        results = ip_solver.solve(model, tee=logger.getEffectiveLevel() == logging.DEBUG, timelimit=time_limit, **solve_params)
 
         logger.info('Solver Result:\n' + str(results))
         last_objective = model.objective.expr()
@@ -177,7 +196,7 @@ def find_permutations(A: np.ndarray, norm: Norm, objective_bound=100, glpk_time_
         permutation = to_ndarray(model.P, n_nodes, n_nodes)
         logger.info(f'P_{i_result} =')
         matshow(permutation)
-        
+
         if np.array_equal(permutation,previous_permutation) and glpk_time_limit:
             logger.debug('The same permutation was found twice; aborting computation')
             break
@@ -213,4 +232,9 @@ if __name__ == '__main__':
     with open(filename, 'rb') as f:
         A = pickle.load(f)
 
-    find_permutations(A=A, norm=Norm.L1, objective_bound=0.01, glpk_time_limit=9)
+    find_permutations(
+        A=A,
+        norm=Norm.L1,
+        solver=Solver.HiGHS,
+        objective_bound=0.01,
+        time_limit=None)
