@@ -24,7 +24,7 @@ def find_trafos(coeff, num_bins, fault_tolerance, round_decimals, quiet):
 
     uni, counts = np.unique(labels, return_counts=True)
     print(f"Used labels before removal: {uni}, counts : {counts}")
-    uni = uni[counts >= 100]
+    # uni = uni[counts >= 100]
     print(f"Used labels after removal: {uni}")
     coeff_perms = []
     for i in uni:

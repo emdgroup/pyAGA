@@ -22,7 +22,7 @@ except (FileNotFoundError, EOFError):
                 # trafos = find_trafos(correlation_matrix, trafo_accuracy)
                 fault_tolerance_ratio = 0.0
                 num_variables = correlation_matrix.shape[0]
-                trafos = find_trafos(
+                trafos, average_matchrate_per_trafo = find_trafos(
                     correlation_matrix,
                     num_bins=trafo_num_bins,
                     fault_tolerance=int(trafo_fault_tolerance_ratio*num_variables),
