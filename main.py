@@ -24,11 +24,15 @@ class Norm(Enum):
 def to_ndarray(v, m, n, dtype=int) -> np.ndarray:
     # Convert pyomo variable to numpy array
     # TODO: when used for a permutation matrix, this should really be some sparse matrix format
-    result = np.zeros((m, n), dtype=dtype)
+    result = np.zeros((m, n), dtype=float)
     for i in range(m):
         for j in range(n):
             result[i, j] = v[i, j].value
-    return result
+
+    if dtype == int:
+        result = np.around(result)
+
+    return result.astype(dtype)
 
 
 def matshow(v: np.ndarray):
