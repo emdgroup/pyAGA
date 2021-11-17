@@ -20,7 +20,6 @@ except (FileNotFoundError, EOFError):
             with open("trafos_" + world_name + ".pickle", "wb") as trafos_file:
                 correlation_matrix = np.transpose(pickle.load(correlation_matrix_file))
                 # trafos = find_trafos(correlation_matrix, trafo_accuracy)
-                fault_tolerance_ratio = 0.0
                 num_variables = correlation_matrix.shape[0]
                 trafos, average_matchrate_per_trafo = find_trafos(
                     correlation_matrix,
