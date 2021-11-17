@@ -5,19 +5,30 @@ import copy
 import pickle
 
 world_name = "12x7_a_and_other_letter"
-trafo_accuracy = 5
+trafo_num_bins = 26
+trafo_round_decimals = 4
+trafo_fault_tolerance_ratio = 0.0
 pattern_size = 2
 level_bound = 5
 
 try:
     with open("trafos_" + world_name + ".pickle", "rb") as trafos_file:
         trafos = pickle.load(trafos_file)
-except FileNotFoundError:
+except (FileNotFoundError, EOFError):
     try:
         with open("correlation_matrix_" + world_name + ".pickle", "rb") as correlation_matrix_file:
             with open("trafos_" + world_name + ".pickle", "wb") as trafos_file:
                 correlation_matrix = np.transpose(pickle.load(correlation_matrix_file))
-                trafos = find_trafos(correlation_matrix, trafo_accuracy)
+                # trafos = find_trafos(correlation_matrix, trafo_accuracy)
+                fault_tolerance_ratio = 0.0
+                num_variables = correlation_matrix.shape[0]
+                trafos = find_trafos(
+                    correlation_matrix,
+                    num_bins=trafo_num_bins,
+                    fault_tolerance=int(trafo_fault_tolerance_ratio*num_variables),
+                    round_decimals=trafo_round_decimals,
+                    quiet=False,
+                )
                 pickle.dump(trafos, trafos_file)
     except FileNotFoundError:
         print("Please provide file correlation_matrix_" + world_name + ".pickle or trafos_" + world_name + ".pickle!")
