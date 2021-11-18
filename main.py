@@ -114,11 +114,7 @@ def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, o
         solver_options = dict()
         solve_params = dict()
     elif solver == Solver.SCIP:
-<<<<<<< HEAD
         solver_factory_params = dict(_name='scip', executable='C:/Users/M290244@eu.merckgroup.com/Desktop/scipampl')
-=======
-        solver_factory_params = dict(_name='scip', executable='/Users/m290886/Downloads/SCIPOptSuite-7.0.3-Darwin/bin/scip')
->>>>>>> 6f81d04f9762db6c36ff74943ffaba359af4e577
         solver_options = dict()
         solve_params = dict()
     else:
@@ -249,10 +245,6 @@ if __name__ == '__main__':
     find_permutations(
         A=A,
         norm=Norm.L1,
-<<<<<<< HEAD
         solver=Solver.GLPK,
-=======
-        solver=Solver.SCIP,
->>>>>>> 6f81d04f9762db6c36ff74943ffaba359af4e577
         objective_bound=0.01,
         time_limit=1200)
