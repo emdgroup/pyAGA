@@ -216,7 +216,7 @@ def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, o
         logger.debug(f'Solving using {solver}')
         results = ip_solver.solve(
             model,
-            tee=logger.getEffectiveLevel() == logging.INFO,
+            tee=logger.getEffectiveLevel() <= logging.INFO,
             timelimit=time_limit,
             report_timing=True,
             **solve_params)
@@ -261,7 +261,7 @@ def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, o
 
 
 if __name__ == '__main__':
-    filename = 'data/one_letter_words_5x5_integers_concurrence_matrix_100.pickle'
+    filename = 'data/one_letter_words_5x5_integers_concurrence_matrix_75.0.pickle'
     logger.info(f'Loading file {filename}')
     with open(filename, 'rb') as f:
         A = pickle.load(f)
