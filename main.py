@@ -9,6 +9,7 @@ from typing import Tuple
 import numpy as np
 import pyomo.environ as po
 from pyomo.common.errors import ApplicationError
+from pyomo.opt import ProblemFormat
 import time
 
 import highs  # noqa: F401
@@ -16,7 +17,7 @@ import scip  # noqa: F401
 
 logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s')
 logger = logging.getLogger(__file__)
-logger.setLevel(level=logging.INFO)  # set to logging.INFO vor less verbosity
+logger.setLevel(level=logging.INFO)  # set to logging.INFO for less, to logging.DEBUG for more verbosity
 
 
 class Norm(Enum):
@@ -105,37 +106,44 @@ def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, o
     model.N = po.Set(initialize=range(n_nodes))
 
     if solver == Solver.GLPK:
-        solver_factory_params = [dict(_name='glpk'), ]
+        solver_factory_params = dict(_name='glpk')
+        solver_executable = []
         solver_options = dict(fpump='')
         solve_params = dict()
     elif solver == Solver.IPOPT:
-        solver_factory_params = [dict(_name='mindtpy'), ]
+        solver_factory_params = dict(_name='mindtpy')
+        solver_executable = []
         solver_options = dict()
         solve_params = dict(mip_solver='glpk', nlp_solver='ipopt')
     elif solver == Solver.HiGHS:
-        solver_factory_params = [
-            dict(_name='highs', executable='/Users/m290886/Downloads/HiGHS.v1.1.0.x86_64-apple-darwin/bin/highs'),
+        solver_factory_params = dict(_name='highs')
+        solver_executable = [
+            '/Users/m290886/Downloads/HiGHS.v1.1.0.x86_64-apple-darwin/bin/highs',
         ]
         solver_options = dict()
         solve_params = dict()
     elif solver == Solver.SCIP:
-        solver_factory_params = [
-            dict(_name='scip', executable='C:/Users/M290244@eu.merckgroup.com/Desktop/scip', solver_io='mps'),
-            dict(_name='scip', executable='/Users/m290886/Downloads/SCIPOptSuite-7.0.3-Darwin/bin/scip', solver_io='mps'),
+        solver_factory_params = dict(_name='scip')
+        solver_executable = [
+            'C:/Users/M290244@eu.merckgroup.com/Desktop/scip',
+            '/Users/m290886/Downloads/SCIPOptSuite-7.0.3-Darwin/bin/scip',
         ]
         solver_options = dict()
         solve_params = dict()
     else:
         raise ValueError(f'Unsupported solver {solver}')
 
-    for params in solver_factory_params:
+    logger.debug(f'Creating Solver using params {solver_factory_params}')
+    ip_solver = po.SolverFactory(**solver_factory_params)
+
+    for executable in solver_executable:
         try:
-            ip_solver = po.SolverFactory(**params)
-            if ip_solver.available():
-                logger.debug(f'Successfully Created Solver using params {params}')
-                break
-        except ApplicationError:
-            pass
+            ip_solver.set_executable(executable, validate=True)
+        except ValueError:
+            continue
+
+        logger.debug(f'Using Solver Executable {executable}')
+        break
 
     ip_solver.options = solver_options
 
@@ -180,6 +188,7 @@ def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, o
         model.negDev = po.Constraint(model.N, model.N, rule=lambda m, i, j: -m.T[i, j] <= deviation(m, i, j))
     elif norm == Norm.L2:
         assert solver in (Solver.IPOPT, Solver.SCIP)
+        ip_solver.set_problem_format(ProblemFormat.mps)
         logger.debug('Creating Objective Function to Minimize L2 Norm of Deviation')
         model.objective = po.Objective(rule=lambda m: sum(deviation(m, i, j)**2 for j in m.N for i in m.N), sense=po.minimize)
     else:
