@@ -1,7 +1,5 @@
 import logging
 import re
-import sys
-import csv
 import subprocess
 from enum import Enum
 
@@ -9,7 +7,7 @@ from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.common import Executable
 from pyomo.common.collections import Bunch
-from pyomo.opt import SolverFactory, OptSolver, ProblemFormat, ResultsFormat, SolverResults, TerminationCondition, SolutionStatus, ProblemSense
+from pyomo.opt import SolverFactory, OptSolver, ProblemFormat, ResultsFormat, SolverResults, TerminationCondition, SolutionStatus
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.solver import SystemCallSolver
 
@@ -22,10 +20,10 @@ def configure_highs():
     global _highs_version
     if _highs_version is not None:
         return
-    _highs_version = _extract_version("")
+    _highs_version = _extract_version('')
     if not Executable("highs"):
         return
-    result = subprocess.run([Executable('highs').path(), "-h"],
+    result = subprocess.run([Executable('highs').path(), '-h'],
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                             timeout=1, universal_newlines=True)
     if not result.returncode:
