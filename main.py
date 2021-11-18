@@ -75,7 +75,8 @@ def create_permutation_combination_constraints(m, all_permutations, id):
         assert current_prod.shape[0] == current_prod.shape[1]
 
         try:
-            logger.debug(f'Skipping [{name}] == [{already_added[repr]}]')
+            already_added_permutation = already_added[repr]
+            logger.debug(f'Skipping [{name}] == [{already_added_permutation}]')
         except KeyError:
             logger.info(f'Adding Constraint for [{name}]')
             m.knownPermutations.add(expr=sum(m.P[tuple(ij)] for ij in np.argwhere(current_prod)) <= current_prod.shape[0] - 1)
