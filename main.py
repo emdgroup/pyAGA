@@ -27,6 +27,7 @@ class Solver(Enum):
     GLPK = 0
     IPOPT = 1
     HiGHS = 2
+    SCIP = 3
 
 
 def to_ndarray(v, m, n, dtype=int) -> np.ndarray:
@@ -110,6 +111,10 @@ def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, o
         solve_params = dict(mip_solver='glpk', nlp_solver='ipopt')
     elif solver == Solver.HiGHS:
         solver_factory_params = dict(_name='highs', executable='/Users/m290886/Downloads/HiGHS.v1.1.0.x86_64-apple-darwin/bin/highs')
+        solver_options = dict()
+        solve_params = dict()
+    elif solver == Solver.SCIP:
+        solver_factory_params = dict(_name='scip', executable='/Users/m290886/Downloads/SCIPOptSuite-7.0.3-Darwin/bin/scip')
         solver_options = dict()
         solve_params = dict()
     else:
@@ -232,7 +237,7 @@ def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, o
 
 
 if __name__ == '__main__':
-    filename = 'data/one_letter_words_5x5_concurrence_matrix_100.pickle'
+    filename = 'data/one_letter_words_5x5_integers_concurrence_matrix_100.pickle'
     logger.info(f'Loading file {filename}')
     with open(filename, 'rb') as f:
         A = pickle.load(f)
@@ -240,6 +245,6 @@ if __name__ == '__main__':
     find_permutations(
         A=A,
         norm=Norm.L1,
-        solver=Solver.HiGHS,
+        solver=Solver.SCIP,
         objective_bound=0.01,
         time_limit=None)
