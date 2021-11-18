@@ -11,6 +11,7 @@ import pyomo.environ as po
 import time
 
 import highs  # noqa: F401
+import scip  # noqa: F401
 
 logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s')
 logger = logging.getLogger(__file__)
@@ -115,7 +116,7 @@ def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, o
         solver_options = dict()
         solve_params = dict()
     elif solver == Solver.SCIP:
-        solver_factory_params = dict(_name='scip', executable='C:/Users/M290244@eu.merckgroup.com/Desktop/scipampl')
+        solver_factory_params = dict(_name='scip', executable='/Users/m290886/Downloads/SCIPOptSuite-7.0.3-Darwin/bin/scip')
         solver_options = dict()
         solve_params = dict()
     else:
@@ -238,7 +239,7 @@ def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, o
 
 
 if __name__ == '__main__':
-    filename = 'data/one_letter_words_5x5_integers_concurrence_matrix_100.pickle'
+    filename = 'data/one_letter_words_10x5_integers_concurrence_matrix_100.pickle'
     logger.info(f'Loading file {filename}')
     with open(filename, 'rb') as f:
         A = pickle.load(f)
@@ -246,6 +247,6 @@ if __name__ == '__main__':
     find_permutations(
         A=A,
         norm=Norm.L1,
-        solver=Solver.GLPK,
+        solver=Solver.SCIP,
         objective_bound=0.01,
-        time_limit=1200)
+        time_limit=None)
