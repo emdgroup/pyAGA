@@ -8,6 +8,7 @@ from typing import Tuple
 
 import numpy as np
 import pyomo.environ as po
+from pyomo.common.errors import ApplicationError
 import time
 
 import highs  # noqa: F401
@@ -104,26 +105,38 @@ def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, o
     model.N = po.Set(initialize=range(n_nodes))
 
     if solver == Solver.GLPK:
-        solver_factory_params = dict(_name='glpk')
+        solver_factory_params = [dict(_name='glpk'), ]
         solver_options = dict(fpump='')
         solve_params = dict()
     elif solver == Solver.IPOPT:
-        solver_factory_params = dict(_name='mindtpy')
+        solver_factory_params = [dict(_name='mindtpy'), ]
         solver_options = dict()
         solve_params = dict(mip_solver='glpk', nlp_solver='ipopt')
     elif solver == Solver.HiGHS:
-        solver_factory_params = dict(_name='highs', executable='/Users/m290886/Downloads/HiGHS.v1.1.0.x86_64-apple-darwin/bin/highs')
+        solver_factory_params = [
+            dict(_name='highs', executable='/Users/m290886/Downloads/HiGHS.v1.1.0.x86_64-apple-darwin/bin/highs'),
+        ]
         solver_options = dict()
         solve_params = dict()
     elif solver == Solver.SCIP:
-        solver_factory_params = dict(_name='scip', executable='/Users/m290886/Downloads/SCIPOptSuite-7.0.3-Darwin/bin/scip', solver_io='mps')
+        solver_factory_params = [
+            dict(_name='scip', executable='C:/Users/M290244@eu.merckgroup.com/Desktop/scip', solver_io='mps'),
+            dict(_name='scip', executable='/Users/m290886/Downloads/SCIPOptSuite-7.0.3-Darwin/bin/scip', solver_io='mps'),
+        ]
         solver_options = dict()
         solve_params = dict()
     else:
         raise ValueError(f'Unsupported solver {solver}')
 
-    logger.debug(f'Creating Solver using params {solver_factory_params}')
-    ip_solver = po.SolverFactory(**solver_factory_params)
+    for params in solver_factory_params:
+        try:
+            ip_solver = po.SolverFactory(**params)
+            if ip_solver.available():
+                logger.debug(f'Successfully Created Solver using params {params}')
+                break
+        except ApplicationError:
+            pass
+
     ip_solver.options = solver_options
 
     logger.debug('Creating Parameter for Concurrence Matrix')
@@ -239,7 +252,7 @@ def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, o
 
 
 if __name__ == '__main__':
-    filename = 'data/one_letter_words_10x5_integers_concurrence_matrix_100.pickle'
+    filename = 'data/one_letter_words_5x5_integers_concurrence_matrix_100.pickle'
     logger.info(f'Loading file {filename}')
     with open(filename, 'rb') as f:
         A = pickle.load(f)
