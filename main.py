@@ -14,7 +14,7 @@ import highs  # noqa: F401
 
 logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s')
 logger = logging.getLogger(__file__)
-logger.setLevel(level=logging.DEBUG)  # set to logging.INFO vor less verbosity
+logger.setLevel(level=logging.INFO)  # set to logging.INFO vor less verbosity
 
 
 class Norm(Enum):
@@ -27,6 +27,7 @@ class Solver(Enum):
     GLPK = 0
     IPOPT = 1
     HiGHS = 2
+    SCIP = 3
 
 
 def to_ndarray(v, m, n, dtype=int) -> np.ndarray:
@@ -74,7 +75,7 @@ def create_permutation_combination_constraints(m, all_permutations, id):
         assert current_prod.shape[0] == current_prod.shape[1]
 
         try:
-            logger.info(f'Skipping [{name}] == [{already_added[repr]}]')
+            logger.debug(f'Skipping [{name}] == [{already_added[repr]}]')
         except KeyError:
             logger.info(f'Adding Constraint for [{name}]')
             m.knownPermutations.add(expr=sum(m.P[tuple(ij)] for ij in np.argwhere(current_prod)) <= current_prod.shape[0] - 1)
@@ -110,6 +111,10 @@ def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, o
         solve_params = dict(mip_solver='glpk', nlp_solver='ipopt')
     elif solver == Solver.HiGHS:
         solver_factory_params = dict(_name='highs', executable='/Users/m290886/Downloads/HiGHS.v1.1.0.x86_64-apple-darwin/bin/highs')
+        solver_options = dict()
+        solve_params = dict()
+    elif solver == Solver.SCIP:
+        solver_factory_params = dict(_name='scip', executable='C:/Users/M290244@eu.merckgroup.com/Desktop/scipampl')
         solver_options = dict()
         solve_params = dict()
     else:
@@ -187,7 +192,7 @@ def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, o
         logger.debug(f'Solving using {solver}')
         results = ip_solver.solve(
             model,
-            tee=logger.getEffectiveLevel() == logging.DEBUG,
+            tee=logger.getEffectiveLevel() == logging.INFO,
             timelimit=time_limit,
             report_timing=True,
             **solve_params)
@@ -240,6 +245,6 @@ if __name__ == '__main__':
     find_permutations(
         A=A,
         norm=Norm.L1,
-        solver=Solver.HiGHS,
+        solver=Solver.GLPK,
         objective_bound=0.01,
-        time_limit=None)
+        time_limit=1200)
