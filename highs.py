@@ -291,28 +291,8 @@ class HiGHS_Shell(SystemCallSolver):
         bbound.number_of_created_subproblems = 0
         bbound.number_of_bounded_subproblems = 0
 
-        #TODO: properly support output file
-        with open(self._log_file, 'r') as output:
-            for line in output:
-                toks = line.split()
-                if 'tree is empty' in line:
-                    bbound.number_of_created_subproblems = toks[-1][:-1]
-                    bbound.number_of_bounded_subproblems = toks[-1][:-1]
-                elif len(toks) == 2 and toks[0] == "sys":
-                    solv.system_time = toks[1]
-                elif len(toks) == 2 and toks[0] == "user":
-                    solv.user_time = toks[1]
-                elif len(toks) > 2 and (toks[0], toks[2]) == ("TIME", "EXCEEDED;"):
-                    solv.termination_condition = TerminationCondition.maxTimeLimit
-                elif len(toks) > 5 and (toks[:6] == ['PROBLEM', 'HAS', 'NO', 'DUAL', 'FEASIBLE', 'SOLUTION']):
-                    solv.termination_condition = TerminationCondition.unbounded
-                elif len(toks) > 5 and (toks[:6] == ['PROBLEM', 'HAS', 'NO', 'PRIMAL', 'FEASIBLE', 'SOLUTION']):
-                    solv.termination_condition = TerminationCondition.infeasible
-                elif len(toks) > 4 and (toks[:5] == ['PROBLEM', 'HAS', 'NO', 'FEASIBLE', 'SOLUTION']):
-                    solv.termination_condition = TerminationCondition.infeasible
-                elif len(toks) > 6 and (toks[:7] == ['LP', 'RELAXATION', 'HAS', 'NO', 'DUAL', 'FEASIBLE', 'SOLUTION']):
-                    solv.termination_condition = TerminationCondition.unbounded
-
+        #TODO: properly read the output file
+        # with open(self._log_file, 'r') as output:
         return results
 
     def process_soln_file(self, results):
@@ -366,8 +346,7 @@ class HiGHS_Shell(SystemCallSolver):
                         obj_val = float(line[10:])
                         results.problem.lower_bound = obj_val
                         results.problem.upper_bound = obj_val
-                        # TODO: for proper output, we should try to find out, what the objective name is to run
-                        # soln.objective[obj_name] = {'Value': obj_val}
+                        soln.objective['__default_objective__'] = {'Value': obj_val}
                         continue
                     if line == 'Feasible':
                         soln.status = SolutionStatus.feasible
