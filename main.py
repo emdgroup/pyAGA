@@ -116,7 +116,7 @@ def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, o
         solver_options = dict()
         solve_params = dict()
     elif solver == Solver.SCIP:
-        solver_factory_params = dict(_name='scip', executable='/Users/m290886/Downloads/SCIPOptSuite-7.0.3-Darwin/bin/scip')
+        solver_factory_params = dict(_name='scip', executable='/Users/m290886/Downloads/SCIPOptSuite-7.0.3-Darwin/bin/scip', solver_io='mps')
         solver_options = dict()
         solve_params = dict()
     else:
@@ -166,7 +166,7 @@ def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, o
         logger.debug('Creating Constraint to Limit Negative Deviation')
         model.negDev = po.Constraint(model.N, model.N, rule=lambda m, i, j: -m.T[i, j] <= deviation(m, i, j))
     elif norm == Norm.L2:
-        assert solver == Solver.IPOPT
+        assert solver in (Solver.IPOPT, Solver.SCIP)
         logger.debug('Creating Objective Function to Minimize L2 Norm of Deviation')
         model.objective = po.Objective(rule=lambda m: sum(deviation(m, i, j)**2 for j in m.N for i in m.N), sense=po.minimize)
     else:
