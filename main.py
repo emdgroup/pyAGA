@@ -162,7 +162,7 @@ def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, o
     model.identityConstraint = po.Constraint(expr=sum(model.P[i, i] for i in range(n_nodes)) <= n_nodes - 1)
 
     def deviation(m, i, j):
-        return sum(m.P[i, k]*m.A[k, j] for k in m.N) - sum(m.A[i, k]*m.P[k, j] for k in m.N)
+        return sum(m.P[i, k]*m.A[k, j] - m.A[i, k]*m.P[k, j] for k in m.N)
 
     if norm == Norm.L0:
         logger.debug('Creating Upper Limit Variable for the Maximum Error')
