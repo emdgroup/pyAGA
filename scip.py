@@ -3703,7 +3703,7 @@ class SCIP_Shell(SystemCallSolver):
             'solvingphases/userestart2to3': 'FALSE',
             # optimal solution value for problem
             # [type: real, advanced: FALSE, range: [-1.79769313486232e+308,1.79769313486232e+308], default: 1e+99]
-            'solvingphases/optimalvalue': '1e+99',
+            'solvingphases/optimalvalue': '0',
             # x-type for logarithmic regression - (t)ime, (n)odes, (l)p iterations
             # [type: char, advanced: FALSE, range: {lnt}, default: n]
             'solvingphases/xtype': 'n',
@@ -8017,6 +8017,8 @@ class SCIP_Shell(SystemCallSolver):
             cmd.insert(0, self._timer)
 
         cmd.extend(['-s', self._options_file])
+        cmd.extend(['-c', 'set heuristics emphasis aggressive'])
+        cmd.extend(['-c', 'set presolving emphasis aggressive'])
         cmd.extend(['-c', f'read {problem_files[0]}'])
         cmd.extend(['-c', 'optimize'])
         cmd.extend(['-c', f'write solution {self._soln_file}'])
