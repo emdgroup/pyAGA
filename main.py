@@ -17,7 +17,7 @@ import scip  # noqa: F401
 
 logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s')
 logger = logging.getLogger(__file__)
-logger.setLevel(level=logging.DEBUG)  # set to logging.INFO for less, to logging.DEBUG for more verbosity
+logger.setLevel(level=logging.INFO)  # set to logging.INFO for less, to logging.DEBUG for more verbosity
 
 
 class Norm(Enum):
@@ -92,7 +92,7 @@ def create_permutation_combination_constraints(m, all_permutations, id):
                         todo_list.append((current_prod@power, ip, f'{name} P_{ip}^{p+1}'))
 
 
-def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, objective_bound=100, time_limit=None):
+def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, objective_bound=100, time_limit=None, prevent_diagonal=False):
 
     assert A.ndim == 2
     assert A.shape[0] == A.shape[1]
@@ -125,7 +125,7 @@ def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, o
     elif solver == Solver.SCIP:
         solver_factory_params = dict(_name='scip')
         solver_executable = [
-            'C:/Users/M290244@eu.merckgroup.com/Desktop/scip',
+            'C:/Program Files/SCIPOptSuite 7.0.3/bin/scip',
             '/Users/m290886/Downloads/SCIPOptSuite-7.0.3-Darwin/bin/scip',
         ]
         solver_options = dict()
@@ -158,9 +158,13 @@ def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, o
     logger.debug('Creating Column Sum Constraint for the Permutation Matrix')
     model.colSum = po.Constraint(model.N, rule=lambda m, j: 1 == sum(m.P[i, j] for i in m.N))
 
-    logger.debug('Creating Constraint to Exclude Identity')
-    model.identityConstraint = po.Constraint(expr=sum(model.P[i, i] for i in range(n_nodes)) <= n_nodes - 1)
-
+    if not prevent_diagonal:
+        logger.debug('Creating Constraint to Exclude Identity')
+        model.identityConstraint = po.Constraint(expr=sum(model.P[i, i] for i in range(n_nodes)) <= n_nodes - 1)
+    else:
+        logger.debug('Creating Constraint to Exclude more than a singe 1 on the diagonal')
+        model.identityConstraint = po.Constraint(expr=sum(model.P[i, i] for i in range(n_nodes)) <= 1)
+        
     def deviation(m, i, j):
         return sum(m.P[i, k]*m.A[k, j] - m.A[i, k]*m.P[k, j] for k in m.N)
 
@@ -261,7 +265,7 @@ def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, o
 
 
 if __name__ == '__main__':
-    filename = 'data/one_letter_words_5x5_integers_concurrence_matrix_75.0.pickle'
+    filename = 'data/one_letter_words_5x5_integers_concurrence_matrix_100.pickle'
     logger.info(f'Loading file {filename}')
     with open(filename, 'rb') as f:
         A = pickle.load(f)
@@ -271,4 +275,5 @@ if __name__ == '__main__':
         norm=Norm.L_1,
         solver=Solver.SCIP,
         objective_bound=0.01,
-        time_limit=None)
+        time_limit=None,
+        prevent_diagonal=True)
