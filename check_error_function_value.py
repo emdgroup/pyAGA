@@ -17,9 +17,6 @@ def to_matrix(trafo):
                                   # visualization.
     return matrix
 
-
-
-
 def error_value(norm, P, A):
     if norm == Norm.L_INFINITY:
         return np.max(np.abs(P@A - A@P))
@@ -67,5 +64,6 @@ for world in worlds:
             points_y_wrong = [error_value(norm, to_matrix(rng.permutation(np.arange(len(test_transformations[0])))), concurrence_matrix) for _ in range(len(test_transformations))]
             ax.scatter([float(percentage)+0.2, ]*len(points_y_wrong), points_y_wrong, color="blue", s=1, label="random permutations")
             #ax.legend()
+
         os.makedirs("plots", exist_ok=True)
         fig.savefig(f"plots/{world}.png")
