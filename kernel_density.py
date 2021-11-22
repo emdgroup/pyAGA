@@ -1,3 +1,5 @@
+from typing import List
+
 import numpy as np
 from sklearn.neighbors import KernelDensity
 import pickle
@@ -22,28 +24,24 @@ def coalesce_values(matrix):
             pass
 
 
-def bins(matrix, bandwidth, plot=False):
-
-    bin_between_maxima = True
-    # If this is True, bins are halfway-points between maxima. If this parameter is
-    # False, then the bins are the minima locations
-
+def bins(matrix, bandwidth, plot=False) -> List[float]:
+    """
+    Calculate the transformation-finder bins using kernel density estimation. For
+    further details, see https://scikit-learn.org/stable/modules/generated/sklearn
+    .neighbors.KernelDensity.html#sklearn.neighbors.KernelDensity.
+    :param matrix: The adjacency matrix of the graph.
+    :param bandwidth: The bandwidth parameter controlling the regularity of the
+    estimation.
+    :param plot: Whether or not to show a plot.
+    :return: The bin edges to use to bin the graph weights.
+    """
     ignore_zero = True
-    ignore_self_concurrence = True
-
-    # cutoff = np.mean(concurrence_matrix) + 4*np.std(concurrence_matrix)
-    # concurrence_matrix = concurrence_matrix[concurrence_matrix < cutoff]
-    #
-
-    # coalesce_values(concurrence_matrix)
-
     kde = KernelDensity(kernel="gaussian", bandwidth=bandwidth)
     if ignore_zero:
         kde.fit(matrix[matrix > 0].reshape(-1, 1))
     else:
         kde.fit(matrix.reshape(-1, 1))
-    #
-    #
+
     # Multiply matrix.max() by 1.01 such that the peak for the self-concurrence is
     # well pronounced.
     plot_x = np.linspace(0, matrix.max() * 1.01, 1000)
@@ -54,15 +52,9 @@ def bins(matrix, bandwidth, plot=False):
     maxima_locations = plot_x[maxima_indices]
     maxima_diffs = np.diff(maxima_locations)
 
-    # for index, value in enumerate(maxima_locations):
-
     bins_with_maxima = maxima_locations[:-1] + maxima_diffs / 2
 
-    if bin_between_maxima:
-        bins = [1e-10] + bins_with_maxima.tolist()
-    else:
-        bins = [1e-10] + minima_locations.tolist() + [bins_with_maxima[-1]]
-        # bins = [1e-10] + minima_locations.tolist()
+    bins = [1e-10] + bins_with_maxima.tolist()
     # bins = plot_x[minima_indices]
     print(f"bins = {bins}")
 
@@ -75,9 +67,6 @@ def bins(matrix, bandwidth, plot=False):
         ax0.plot(plot_x, y)
         for bin in bins:
             ax1.axvline(bin, color="red")
-
-        # for mini in minima_locations:
-        #     ax1.axvline(mini, color="green")
         if ignore_zero:
             ax1.hist(
                 matrix[matrix > 0],
@@ -85,9 +74,7 @@ def bins(matrix, bandwidth, plot=False):
             )
         else:
             ax1.hist(matrix, bins=300)
-
         plt.show()
-
     return bins
 
 

@@ -1,9 +1,12 @@
-def cycles(perm):
+from typing import List, Union
+
+
+def cycles(perm: List[Union[int, None]]) -> List[List[int]]:
     """
     Calculate complete cycles in incomplete permutation with None entries, meaning
     return the cycles without these entries.
-    :param perm:
-    :return:
+    :param perm: A permutation in list notation.
+    :return: The list of cycles (in cycles notation).
     """
     all_indices = set(range(len(perm)))
     cycles = []

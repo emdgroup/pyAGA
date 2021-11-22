@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import List, Union, Set
 
 import numpy as np
 import sys
@@ -7,105 +8,131 @@ import combinatorics
 import kernel_density
 import verify_transformations as vt
 
-matching_rates = []
-
-table_matched_nodes = []
-
 sys.path.append(r"C:\Users\M305822\OneDrive - MerckGroup\PycharmProjects")
 from integer_programming_for_transformations import main as ipt
 
 
-class Norm(Enum):
-    L_INFINITY = 0
-    L_1 = 1
-    L_2 = 2
-
-
-class Solver(Enum):
-    GLPK = 0
-    IPOPT = 1
-    HiGHS = 2
-    SCIP = 3
-
-
-def find_trafos(coeff, num_bins, fault_tolerance, round_decimals, quiet, bandwidth):
-    # form set of all correlation coefficients
+def find_trafos(
+    adjacency_matrix: np.ndarray,
+    fault_tolerance: int,
+    round_decimals: int,
+    quiet: bool,
+    bandwidth: float,
+    casename: str,
+    use_integer_programming,
+) -> List[List[Union[int, None]]]:
+    """
+    Find all transformations (i.e. graph symmetries) on a given graph.
+    :param use_integer_programming:
+    :param adjacency_matrix: The adjacency matrix of the graph.
+    :param fault_tolerance: The number of tolerated unmappable nodes.
+    :param round_decimals: The number of positions which will be left after rounding
+    the adjacency matrix values.
+    :param quiet: Whether to print debugging information to the terminal.
+    :param bandwidth: The bandwidth parameter for the kernel density estimation and
+    subsequent bin calculation.
+    :param casename: The name of the testcase.
+    :return: A tuple containing the found transformations as its first entry,
+    and the average matchrate over the found transformations as its second.
+    Matchrates are the ratios of correctly mapped nodes to unmappable ones.
+    """
     if round_decimals is not None:
-        coeff = coeff.round(round_decimals)
-    bins = kernel_density.bins(coeff, bandwidth=bandwidth, plot=True)
+        adjacency_matrix = adjacency_matrix.round(round_decimals)
+    bins = kernel_density.bins(adjacency_matrix, bandwidth=bandwidth, plot=True)
+    labels = np.digitize(adjacency_matrix, bins=bins)
+    unique_values, counts = np.unique(labels, return_counts=True)
+    equivalency_classes = []
+    for value in unique_values:
+        s = np.argwhere(labels == value)
+        equivalency_classes.append([j for j in s if j[0] <= j[1]])
 
-    labels = np.digitize(coeff, bins=bins)
-
-    uni, counts = np.unique(labels, return_counts=True)
-    # print(f"Used labels before removal: {uni}, counts : {counts}")
-    # # uni = uni[counts >= 200]
-    # print(f"Used labels after removal: {uni}")
-    coeff_perms = []
-    for i in uni:
-        s = np.argwhere(labels == i)
-        coeff_perms.append([j for j in s if j[0] <= j[1]])
-        # ## Binning method
-
-    # # # isclose-method
-    # # coeff_perms = []
-    # # for i in coeff_vals:
-    # #     s = np.argwhere(arr_2D_isclose(coeff, i, abs_tol=abs_tol, rel_tol=rel_tol)
-    # #     s = np.argwhere(coeff == i)
-    # #     coeff_perms.append([j for j in s if j[0] <= j[1]])#
-    # # # isclose-method
-
-    # coeff_perms = []
-    # for i in coeff_vals:
-    #     s = np.argwhere(coeff == i)
-    #     coeff_perms.append([j for j in s if j[0] <= j[1]])
-
-    # poss: entry i is set of all possible rho(i) based on coeff_perms
-    n = np.shape(coeff)[0]
-    poss = [set(range(n))] * n
+    n = np.shape(adjacency_matrix)[0]
+    # possible_mappings: entry i is set of all possible mappings based on the
+    # adjacency matrix
+    possible_mappings = [set(range(n))] * n
     # this is where the algorithm starts
-    matching_rates = []  # reset module-global list
-    trafos = calculate_trafos(
-        coeff_perms, poss, [], quiet, fault_tolerance, matching_rates, coeff
+    matching_rates = []
+    trafos = []
+    calculate_trafos(
+        adjacency_matrix,
+        equivalency_classes,
+        possible_mappings,
+        quiet,
+        fault_tolerance,
+        matching_rates,
+        casename,
+        trafos,
+        use_integer_programming,
     )
     return trafos, sum(matching_rates) / len(matching_rates)
 
 
-def calculate_trafos(perms, poss, res, quiet, fault_tolerance, matching_rates, coeff):
-    if all(len(i) == 1 for i in poss):
-        res.append([s.pop() for s in poss])
+def calculate_trafos(
+    adjacency_matrix: np.ndarray,
+    equivalency_classes: List[List[np.ndarray]],
+    possible_mappings: List[Set],
+    quiet: bool,
+    fault_tolerance: int,
+    matching_rates: List[float],
+    casename: str,
+    result: List[List[Union[int, None]]],
+    use_integer_programming: bool,
+):
+    """Calculate the transformations with the given possible mappings. This function
+    is called recursively, until all sets in the possible mappings have at most one
+    entry.
+
+    :param use_integer_programming:
+    :param adjacency_matrix: The adjacency matrix of the graph.
+    :param equivalency_classes: A list of lists of edges which can be mapped onto
+    each other freely, as they are considered to be equivalent, i.e. their weights
+    fall into the same bin.
+    :param possible_mappings: A list containing all possible mappings of the node at
+    each position.
+    :param quiet: Whether to print debugging information to the terminal.
+    :param fault_tolerance: The number of tolerated unmappable nodes.
+    :param matching_rates: The list containing the matchrates of the found
+    :param casename: The name of the testcase.
+    :param result: The list containing all currently found transformations.
+    :return:
+    """
+    if all(len(i) == 1 for i in possible_mappings):
+        result.append([s.pop() for s in possible_mappings])
         matching_rates.append(1)
         if not quiet:
-            permutation = res[-1]
+            permutation = result[-1]
             norm_val = np.linalg.norm(
-                coeff @ vt.to_matrix(permutation) - vt.to_matrix(permutation) @ coeff
+                adjacency_matrix @ vt.to_matrix(permutation)
+                - vt.to_matrix(permutation) @ adjacency_matrix
             )
             print(
-                f"len(res) = {len(res)}, correctly matched all nodes. "
+                f"len(res) = {len(result)}, correctly matched all nodes. "
                 f"Norm value = {norm_val}"
             )
-        return res
-    elif any(len(i) == 0 for i in poss):
-        num_unmatchable = len([i for i in poss if len(i) == 0])
+        return
+    elif any(len(i) == 0 for i in possible_mappings):
+        num_unmatchable = len([i for i in possible_mappings if len(i) == 0])
         if num_unmatchable > fault_tolerance:
-            return res
-        num_correctly_matched = len([i for i in poss if len(i) == 1])
-        num_uncertain = len([i for i in poss if len(i) > 1])
+            return
+        num_correctly_matched = len([i for i in possible_mappings if len(i) == 1])
+        num_uncertain = len([i for i in possible_mappings if len(i) > 1])
         if num_uncertain == 0:
-            if num_correctly_matched >= len(poss) - fault_tolerance:
-                res.append([s.pop() if len(s) > 0 else None for s in poss])
-                matching_rates.append(num_correctly_matched / len(poss))
-
-                permutation = res[-1]
+            if num_correctly_matched >= len(possible_mappings) - fault_tolerance:
+                result.append(
+                    [s.pop() if len(s) > 0 else None for s in possible_mappings]
+                )
+                matching_rates.append(num_correctly_matched / len(possible_mappings))
+                permutation = result[-1]
                 print("---------------------------------------------------")
                 if not quiet:
-                    c = combinatorics.cycles(permutation)
+                    cycles = combinatorics.cycles(permutation)
                     complete_cycle_indices = []
-                    for list_ in c:
-                        complete_cycle_indices.extend(list_)
+                    for cycle in cycles:
+                        complete_cycle_indices.extend(cycle)
 
                     complete_cycle_indices.sort()
-                    reduced_coeff = coeff[
-                        complete_cycle_indices, :][:, complete_cycle_indices
+                    reduced_coeff = adjacency_matrix[complete_cycle_indices, :][
+                        :, complete_cycle_indices
                     ]
 
                     reordered_permutation = reduced_coeff.shape[0] * [None]
@@ -119,53 +146,76 @@ def calculate_trafos(perms, poss, res, quiet, fault_tolerance, matching_rates, c
                         - vt.to_matrix(reordered_permutation) @ reduced_coeff
                     )
                     print(
-                        f"len(res) = {len(res)}, correctly matched"
+                        f"len(res) = {len(result)}, correctly matched"
                         f" {num_correctly_matched} nodes. "
                         f"Norm value = {norm_val}"
                     )
                     print("permutation")
                     print(permutation)
-                    if vt.verify_one_transformation(
-                            permutation, casename="one_letter_words_10x5"
-                    ):
+                    if vt.verify_one_transformation(permutation, casename=casename):
                         print("Permutation is legitimate")
                     else:
                         print("Permutation is NOT legitimate.")
-                    filled_permutation = ipt.find_permutations(
-                        A=coeff,
-                        norm=ipt.Norm.L_1,
-                        solver=ipt.Solver.GLPK,
-                        objective_bound=1e9,
-                        time_limit=None,
-                        prevent_diagonal=True,
-                        known_entries=permutation
-                    )
-                    print("filled permutation")
-                    print(filled_permutation)
-                    print("---------------------------------------------------")
+                    if use_integer_programming:
+                        filled_permutation = ipt.find_permutations(
+                            A=adjacency_matrix,
+                            norm=ipt.Norm.L_1,
+                            solver=ipt.Solver.GLPK,
+                            objective_bound=1e9,
+                            time_limit=None,
+                            prevent_diagonal=True,
+                            known_entries=permutation,
+                        )
+                        print("filled permutation")
+                        print(filled_permutation)
+                        print("---------------------------------------------------")
 
-                return res
+                return
             else:
                 assert False
-                return res
         else:
             pass
 
-    s = min(([i for i in poss if len(i) > 1]), key=len)
-    x = poss.index(s)
+    s = min(([i for i in possible_mappings if len(i) > 1]), key=len)
+    x = possible_mappings.index(s)
 
     for y in s:
-        new_poss = filter_perms(perms, list(poss), x, y)
-        if new_poss == poss:
+        new_poss = filter_perms(equivalency_classes, list(possible_mappings), x, y)
+        if new_poss == possible_mappings:
             print("Filtering left possibilities unchanged. Returning early.")
-            return res
-        res = calculate_trafos(
-            perms, new_poss, res, quiet, fault_tolerance, matching_rates, coeff
+            return
+        calculate_trafos(
+            adjacency_matrix,
+            equivalency_classes,
+            new_poss,
+            quiet,
+            fault_tolerance,
+            matching_rates,
+            casename,
+            result,
+            use_integer_programming,
         )
-    return res
+    return
 
 
-def filter_perms(equivalence_classes, poss, x, y):
+def filter_perms(
+    equivalence_classes: List[List[np.ndarray]],
+    possible_mappings: List[Set],
+    x: int,
+    y: int,
+) -> List[Set]:
+    """
+    Filter the given list of possible mappings under the assumption that x is mapped
+    to y.
+    :param equivalence_classes: A list of lists of edges which can be mapped onto
+    each other freely, as they are considered to be equivalent, i.e. their weights
+    fall into the same bin.
+    :param possible_mappings: A list containing all possible mappings of the node at
+    each position.
+    :param x: The original node of the assumed map.
+    :param y: The image node of the assumed map.
+    :return: The possible mappings under the given assumed map.
+    """
     # Iterate over all possible weights w
     for equivalence_class in equivalence_classes:
         s = set()
@@ -187,6 +237,5 @@ def filter_perms(equivalence_classes, poss, x, y):
             else:
                 continue
             # Vertex z can only be mapped to vertices in S_w if x is mapped to y
-            poss[z] = poss[z].intersection(s)
-    return poss
-
+            possible_mappings[z] = possible_mappings[z].intersection(s)
+    return possible_mappings
