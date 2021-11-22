@@ -8,7 +8,7 @@ from typing import Tuple
 
 import numpy as np
 import pyomo.environ as po
-from pyomo.opt import ProblemFormat
+from pyomo.opt import ProblemFormat, SolverStatus, TerminationCondition
 import time
 
 try:
@@ -250,6 +250,15 @@ def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, o
             **solve_params)
 
         logger.info('Solver Result:\n' + str(results))
+
+        if (results.solver.status == SolverStatus.ok) and (results.solver.termination_condition == TerminationCondition.optimal):
+            logger.debug('Found Optimal Solution.')
+        elif (results.solver.termination_condition == TerminationCondition.infeasible):
+            logger.error('Problem is Infeasible.')
+            raise RuntimeError('Problem is Infeasible.')
+        else:
+            logger.warning(f'Unexpected solver status: {results.solver.status}')
+
         last_objective = model.objective.expr()
         if last_objective >= objective_bound:
             logger.warning('Current objective value exceeds the given bound; calculation is stopped')
