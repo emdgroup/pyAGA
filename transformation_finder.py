@@ -184,8 +184,9 @@ def calculate_trafos(
     for y in s:
         new_poss = filter_perms(equivalency_classes, list(possible_mappings), x, y)
         if new_poss == possible_mappings:
-            print("Filtering left possibilities unchanged. Returning early.")
-            return
+            print("This should not happen. Please assure that all self-concurrences "
+                  "have fallen into the same bin.")
+            assert False
         calculate_trafos(
             adjacency_matrix,
             equivalency_classes,
