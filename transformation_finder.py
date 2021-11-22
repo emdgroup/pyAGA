@@ -23,7 +23,6 @@ def find_trafos(
 ) -> List[List[Union[int, None]]]:
     """
     Find all transformations (i.e. graph symmetries) on a given graph.
-    :param use_integer_programming:
     :param adjacency_matrix: The adjacency matrix of the graph.
     :param fault_tolerance: The number of tolerated unmappable nodes.
     :param round_decimals: The number of positions which will be left after rounding
@@ -32,6 +31,8 @@ def find_trafos(
     :param bandwidth: The bandwidth parameter for the kernel density estimation and
     subsequent bin calculation.
     :param casename: The name of the testcase.
+    :param use_integer_programming: Whether or not to use the integer programming
+    routines to fill out partial transformations.
     :return: A tuple containing the found transformations as its first entry,
     and the average matchrate over the found transformations as its second.
     Matchrates are the ratios of correctly mapped nodes to unmappable ones.
@@ -61,8 +62,8 @@ def find_trafos(
         fault_tolerance,
         matching_rates,
         casename,
-        trafos,
         use_integer_programming,
+        trafos,
     )
     return trafos, sum(matching_rates) / len(matching_rates)
 
@@ -75,14 +76,13 @@ def calculate_trafos(
     fault_tolerance: int,
     matching_rates: List[float],
     casename: str,
-    result: List[List[Union[int, None]]],
     use_integer_programming: bool,
-):
+    result: List[List[Union[int, None]]],
+) -> None:
     """Calculate the transformations with the given possible mappings. This function
     is called recursively, until all sets in the possible mappings have at most one
     entry.
 
-    :param use_integer_programming:
     :param adjacency_matrix: The adjacency matrix of the graph.
     :param equivalency_classes: A list of lists of edges which can be mapped onto
     each other freely, as they are considered to be equivalent, i.e. their weights
@@ -93,8 +93,10 @@ def calculate_trafos(
     :param fault_tolerance: The number of tolerated unmappable nodes.
     :param matching_rates: The list containing the matchrates of the found
     :param casename: The name of the testcase.
+    :param use_integer_programming: Whether or not to use the integer programming
+    routines to fill out partial transformations.
     :param result: The list containing all currently found transformations.
-    :return:
+    :return: None
     """
     if all(len(i) == 1 for i in possible_mappings):
         result.append([s.pop() for s in possible_mappings])
@@ -192,8 +194,8 @@ def calculate_trafos(
             fault_tolerance,
             matching_rates,
             casename,
-            result,
             use_integer_programming,
+            result,
         )
     return
 
