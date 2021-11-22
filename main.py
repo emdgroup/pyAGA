@@ -8,7 +8,6 @@ from typing import Tuple
 
 import numpy as np
 import pyomo.environ as po
-from pyomo.common.errors import ApplicationError
 from pyomo.opt import ProblemFormat
 import time
 
@@ -17,7 +16,7 @@ import scip  # noqa: F401
 
 logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s')
 logger = logging.getLogger(__file__)
-logger.setLevel(level=logging.DEBUG)  # set to logging.INFO for less, to logging.DEBUG for more verbosity
+logger.setLevel(level=logging.INFO)  # set to logging.INFO for less, to logging.DEBUG for more verbosity
 
 
 class Norm(Enum):
@@ -160,8 +159,9 @@ def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, o
 
     logger.debug('Creating Boolean Permutation Matrix')
     model.P = po.Var(model.N, model.N, within=po.Boolean)
-    known_entries = list(enumerate(known_entries))[::2]
+
     if known_entries is not None:
+        known_entries = list(enumerate(known_entries))[::2]
         for index, value in known_entries:
             if value is not None:
                 for i in model.N:
@@ -184,7 +184,7 @@ def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, o
     else:
         logger.debug('Creating Constraint to Exclude more than a singe 1 on the diagonal')
         model.identityConstraint = po.Constraint(expr=sum(model.P[i, i] for i in range(n_nodes)) <= 1)
-        
+
     def deviation(m, i, j):
         return sum(m.P[i, k]*m.A[k, j] - m.A[i, k]*m.P[k, j] for k in m.N)
 
@@ -259,6 +259,13 @@ def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, o
 
         logger.info(f'P_{i_result} =')
         matshow(permutation)
+
+        if norm == Norm.L_INFINITY:
+            logger.info(f'Deviation Value: {np.max(np.abs(permutation @ A - A @ permutation))}')
+        elif norm == Norm.L_1:
+            logger.info(f'Deviation Value: {np.sum(np.abs(permutation @ A - A @ permutation))}')
+        elif norm == Norm.L_2:
+            logger.info(f'Deviation Value: {np.sum((permutation @ A - A @ permutation)**2)}')
 
         if np.array_equal(permutation, previous_permutation) and time_limit:
             logger.debug('The same permutation was found twice; aborting computation')
