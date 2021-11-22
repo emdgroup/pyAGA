@@ -1,7 +1,6 @@
 import logging
 import re
 import subprocess
-from enum import Enum
 
 from pyomo.common.tempfiles import TempfileManager
 
@@ -8019,9 +8018,11 @@ class SCIP_Shell(SystemCallSolver):
         cmd.extend(['-s', self._options_file])
         cmd.extend(['-c', 'set heuristics emphasis aggressive'])
         cmd.extend(['-c', 'set presolving emphasis aggressive'])
+        # cmd.extend(['-c', 'set separation emphasis aggressive'])
         cmd.extend(['-c', f'read {problem_files[0]}'])
         cmd.extend(['-c', 'optimize'])
         cmd.extend(['-c', f'write solution {self._soln_file}'])
+        cmd.extend(['-c', 'display statistics'])
         cmd.extend(['-c', 'quit'])
 
         return Bunch(cmd=cmd, log_file=self._log_file, env=None)
@@ -8059,6 +8060,8 @@ class SCIP_Shell(SystemCallSolver):
                 solution_status = line[16:].strip()
                 if solution_status == 'optimal solution found':
                     results.solver.termination_condition = TerminationCondition.optimal
+                elif solution_status == 'infeasible':
+                    results.solver.termination_condition = TerminationCondition.infeasible
                 else:
                     logger.warning(f'Unexpected solution status: {solution_status}')
             else:
