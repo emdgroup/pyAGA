@@ -11,8 +11,8 @@ import pyomo.environ as po
 from pyomo.opt import ProblemFormat
 import time
 
-import highs  # noqa: F401
-import scip  # noqa: F401
+from . import highs  # noqa: F401
+from . import scip  # noqa: F401
 
 logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s')
 logger = logging.getLogger(__file__)
