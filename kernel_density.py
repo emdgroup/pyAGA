@@ -69,9 +69,13 @@ def bins(matrix, bandwidth, plot=False):
     if plot:
         fig, ax = plt.subplots(nrows=2, sharex=True)
         ax0, ax1 = ax
+        ax0.set_xlabel("concurrence $\langle x_1 x_2 \\rangle$")
+        ax0.set_ylabel("value density $\\rho$")
+        ax1.set_ylabel("value frequency")
         ax0.plot(plot_x, y)
         for bin in bins:
             ax1.axvline(bin, color="red")
+
         # for mini in minima_locations:
         #     ax1.axvline(mini, color="green")
         if ignore_zero:
@@ -85,6 +89,7 @@ def bins(matrix, bandwidth, plot=False):
         plt.show()
 
     return bins
+
 
 if __name__ == "__main__":
     with open(

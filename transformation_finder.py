@@ -32,7 +32,7 @@ def find_trafos(coeff, num_bins, fault_tolerance, round_decimals, quiet, bandwid
     # form set of all correlation coefficients
     if round_decimals is not None:
         coeff = coeff.round(round_decimals)
-    bins = kernel_density.bins(coeff, bandwidth=bandwidth, plot=False)
+    bins = kernel_density.bins(coeff, bandwidth=bandwidth, plot=True)
 
     labels = np.digitize(coeff, bins=bins)
 
@@ -104,15 +104,6 @@ def calculate_trafos(perms, poss, res, quiet, fault_tolerance, matching_rates, c
                         complete_cycle_indices.extend(list_)
 
                     complete_cycle_indices.sort()
-                    not_mapped_x = []
-                    # for index, value in enumerate(permutation):
-                    #     if value is None:
-                    #         not_mapped_x.append(index)
-                    # set_all_indices = set(list(range(len(permutation))))
-                    # set_missing_y = set_all_indices - set(permutation)
-                    # allowed_indices = set_all_indices - set(not_mapped_x) - \
-                    #                   set_missing_y
-                    # allowed_indices = list(allowed_indices)
                     reduced_coeff = coeff[
                         complete_cycle_indices, :][:, complete_cycle_indices
                     ]
@@ -123,10 +114,6 @@ def calculate_trafos(perms, poss, res, quiet, fault_tolerance, matching_rates, c
                             new_index = complete_cycle_indices.index(index)
                             entry = complete_cycle_indices.index(value)
                             reordered_permutation[new_index] = entry
-                    # reordered_permutation = np.array(permutation)[allowed_indices]
-                    # for index, value in enumerate(reordered_permutation):
-                    #     reordered_permutation[index] = allowed_indices.index(value)
-                    #
                     norm_val = np.linalg.norm(
                         reduced_coeff @ vt.to_matrix(reordered_permutation)
                         - vt.to_matrix(reordered_permutation) @ reduced_coeff
