@@ -8022,7 +8022,7 @@ class SCIP_Shell(SystemCallSolver):
         cmd.extend(['-c', f'read {problem_files[0]}'])
         cmd.extend(['-c', 'optimize'])
         cmd.extend(['-c', f'write solution {self._soln_file}'])
-        cmd.extend(['-c', 'display statistics'])
+        # cmd.extend(['-c', 'display statistics'])
         cmd.extend(['-c', 'quit'])
 
         return Bunch(cmd=cmd, log_file=self._log_file, env=None)
