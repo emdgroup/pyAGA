@@ -1,31 +1,45 @@
+from enum import Enum
+
 import numpy as np
+import sys
+
+import combinatorics
+import kernel_density
+import verify_transformations as vt
 
 matching_rates = []
 
 table_matched_nodes = []
 
+sys.path.append(r"C:\Users\M305822\OneDrive - MerckGroup\PycharmProjects")
+from integer_programming_for_transformations import main as ipt
 
-def find_trafos(coeff, num_bins, fault_tolerance, round_decimals, quiet):
+
+class Norm(Enum):
+    L_INFINITY = 0
+    L_1 = 1
+    L_2 = 2
+
+
+class Solver(Enum):
+    GLPK = 0
+    IPOPT = 1
+    HiGHS = 2
+    SCIP = 3
+
+
+def find_trafos(coeff, num_bins, fault_tolerance, round_decimals, quiet, bandwidth):
     # form set of all correlation coefficients
     if round_decimals is not None:
         coeff = coeff.round(round_decimals)
-    coeff_vals = np.unique(coeff)
-    # coeff_perms: each entry contains the edges with same correlation
-    # ## Binning method
-    if num_bins is None:
-        bins = np.histogram_bin_edges(coeff, bins="doane")
-        if not quiet:
-            print(bins)
-    else:
-        assert isinstance(num_bins, int)
-        bins = np.linspace(coeff.min(), coeff.max(), num_bins + 1)
+    bins = kernel_density.bins(coeff, bandwidth=bandwidth, plot=False)
 
     labels = np.digitize(coeff, bins=bins)
 
     uni, counts = np.unique(labels, return_counts=True)
-    print(f"Used labels before removal: {uni}, counts : {counts}")
-    # uni = uni[counts >= 100]
-    print(f"Used labels after removal: {uni}")
+    # print(f"Used labels before removal: {uni}, counts : {counts}")
+    # # uni = uni[counts >= 200]
+    # print(f"Used labels after removal: {uni}")
     coeff_perms = []
     for i in uni:
         s = np.argwhere(labels == i)
@@ -50,18 +64,25 @@ def find_trafos(coeff, num_bins, fault_tolerance, round_decimals, quiet):
     poss = [set(range(n))] * n
     # this is where the algorithm starts
     matching_rates = []  # reset module-global list
-    trafos = calculate_trafos(coeff_perms, poss, [], quiet,
-                              fault_tolerance, matching_rates)
-
+    trafos = calculate_trafos(
+        coeff_perms, poss, [], quiet, fault_tolerance, matching_rates, coeff
+    )
     return trafos, sum(matching_rates) / len(matching_rates)
 
 
-def calculate_trafos(perms, poss, res, quiet, fault_tolerance, matching_rates):
+def calculate_trafos(perms, poss, res, quiet, fault_tolerance, matching_rates, coeff):
     if all(len(i) == 1 for i in poss):
         res.append([s.pop() for s in poss])
         matching_rates.append(1)
         if not quiet:
-            print(f"len(res) = {len(res)}, correctly matched all nodes.")
+            permutation = res[-1]
+            norm_val = np.linalg.norm(
+                coeff @ vt.to_matrix(permutation) - vt.to_matrix(permutation) @ coeff
+            )
+            print(
+                f"len(res) = {len(res)}, correctly matched all nodes. "
+                f"Norm value = {norm_val}"
+            )
         return res
     elif any(len(i) == 0 for i in poss):
         num_unmatchable = len([i for i in poss if len(i) == 0])
@@ -73,9 +94,69 @@ def calculate_trafos(perms, poss, res, quiet, fault_tolerance, matching_rates):
             if num_correctly_matched >= len(poss) - fault_tolerance:
                 res.append([s.pop() if len(s) > 0 else None for s in poss])
                 matching_rates.append(num_correctly_matched / len(poss))
+
+                permutation = res[-1]
+                print("---------------------------------------------------")
                 if not quiet:
-                    print(f"len(res) = {len(res)}, correctly matched"
-                          f" {num_correctly_matched} nodes.")
+                    c = combinatorics.cycles(permutation)
+                    complete_cycle_indices = []
+                    for list_ in c:
+                        complete_cycle_indices.extend(list_)
+
+                    complete_cycle_indices.sort()
+                    not_mapped_x = []
+                    # for index, value in enumerate(permutation):
+                    #     if value is None:
+                    #         not_mapped_x.append(index)
+                    # set_all_indices = set(list(range(len(permutation))))
+                    # set_missing_y = set_all_indices - set(permutation)
+                    # allowed_indices = set_all_indices - set(not_mapped_x) - \
+                    #                   set_missing_y
+                    # allowed_indices = list(allowed_indices)
+                    reduced_coeff = coeff[
+                        complete_cycle_indices, :][:, complete_cycle_indices
+                    ]
+
+                    reordered_permutation = reduced_coeff.shape[0] * [None]
+                    for index, value in enumerate(permutation):
+                        if index in complete_cycle_indices:
+                            new_index = complete_cycle_indices.index(index)
+                            entry = complete_cycle_indices.index(value)
+                            reordered_permutation[new_index] = entry
+                    # reordered_permutation = np.array(permutation)[allowed_indices]
+                    # for index, value in enumerate(reordered_permutation):
+                    #     reordered_permutation[index] = allowed_indices.index(value)
+                    #
+                    norm_val = np.linalg.norm(
+                        reduced_coeff @ vt.to_matrix(reordered_permutation)
+                        - vt.to_matrix(reordered_permutation) @ reduced_coeff
+                    )
+                    print(
+                        f"len(res) = {len(res)}, correctly matched"
+                        f" {num_correctly_matched} nodes. "
+                        f"Norm value = {norm_val}"
+                    )
+                    print("permutation")
+                    print(permutation)
+                    if vt.verify_one_transformation(
+                            permutation, casename="one_letter_words_10x5"
+                    ):
+                        print("Permutation is legitimate")
+                    else:
+                        print("Permutation is NOT legitimate.")
+                    filled_permutation = ipt.find_permutations(
+                        A=coeff,
+                        norm=ipt.Norm.L_1,
+                        solver=ipt.Solver.GLPK,
+                        objective_bound=1e9,
+                        time_limit=None,
+                        prevent_diagonal=True,
+                        known_entries=permutation
+                    )
+                    print("filled permutation")
+                    print(filled_permutation)
+                    print("---------------------------------------------------")
+
                 return res
             else:
                 assert False
@@ -88,7 +169,12 @@ def calculate_trafos(perms, poss, res, quiet, fault_tolerance, matching_rates):
 
     for y in s:
         new_poss = filter_perms(perms, list(poss), x, y)
-        res = calculate_trafos(perms, new_poss, res, quiet, fault_tolerance, matching_rates)
+        if new_poss == poss:
+            print("Filtering left possibilities unchanged. Returning early.")
+            return res
+        res = calculate_trafos(
+            perms, new_poss, res, quiet, fault_tolerance, matching_rates, coeff
+        )
     return res
 
 
@@ -116,3 +202,4 @@ def filter_perms(equivalence_classes, poss, x, y):
             # Vertex z can only be mapped to vertices in S_w if x is mapped to y
             poss[z] = poss[z].intersection(s)
     return poss
+
