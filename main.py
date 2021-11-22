@@ -17,7 +17,7 @@ import scip  # noqa: F401
 
 logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s')
 logger = logging.getLogger(__file__)
-logger.setLevel(level=logging.INFO)  # set to logging.INFO for less, to logging.DEBUG for more verbosity
+logger.setLevel(level=logging.DEBUG)  # set to logging.INFO for less, to logging.DEBUG for more verbosity
 
 
 class Norm(Enum):
@@ -45,6 +45,14 @@ def to_ndarray(v, m, n, dtype=int) -> np.ndarray:
         result = np.around(result)
 
     return result.astype(dtype)
+
+
+def to_list(matrix):
+    perm = []
+    for row in matrix:
+        entry = np.argwhere(row == 1)[0][0]
+        perm.append(entry)
+    return perm
 
 
 def matshow(v: np.ndarray):
@@ -92,11 +100,11 @@ def create_permutation_combination_constraints(m, all_permutations, id):
                         todo_list.append((current_prod@power, ip, f'{name} P_{ip}^{p+1}'))
 
 
-def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, objective_bound=100, time_limit=None, prevent_diagonal=False):
+def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, objective_bound=100, time_limit=None, prevent_diagonal=False, known_entries=None):
 
     assert A.ndim == 2
     assert A.shape[0] == A.shape[1]
-    assert isinstance(norm, Norm)
+    # assert isinstance(norm, Norm)
 
     n_nodes = A.shape[0]
 
@@ -152,11 +160,23 @@ def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, o
 
     logger.debug('Creating Boolean Permutation Matrix')
     model.P = po.Var(model.N, model.N, within=po.Boolean)
+    known_entries = list(enumerate(known_entries))[::2]
+    if known_entries is not None:
+        for index, value in known_entries:
+            if value is not None:
+                for i in model.N:
+                    if i != index:
+                        model.P[i, value].fix(0)
+                for j in model.N:
+                    if j != value:
+                        model.P[index, j].fix(0)
+                model.P[index, value].fix(1)
 
     logger.debug('Creating Row Sum Constraint for the Permutation Matrix')
     model.rowSum = po.Constraint(model.N, rule=lambda m, i: 1 == sum(m.P[i, j] for j in m.N))
     logger.debug('Creating Column Sum Constraint for the Permutation Matrix')
     model.colSum = po.Constraint(model.N, rule=lambda m, j: 1 == sum(m.P[i, j] for i in m.N))
+
 
     if not prevent_diagonal:
         logger.debug('Creating Constraint to Exclude Identity')
@@ -232,6 +252,11 @@ def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, o
             break
 
         permutation = to_ndarray(model.P, n_nodes, n_nodes)
+
+        if known_entries is not None:
+            perm_list = to_list(permutation)
+            return perm_list
+
         logger.info(f'P_{i_result} =')
         matshow(permutation)
 
@@ -276,4 +301,6 @@ if __name__ == '__main__':
         solver=Solver.SCIP,
         objective_bound=0.01,
         time_limit=None,
-        prevent_diagonal=True)
+        prevent_diagonal=True,
+        known_entries=None
+    )
