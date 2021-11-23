@@ -3,7 +3,6 @@ from typing import List, Union, Set
 import numpy as np
 import sys
 
-import combinatorics
 import kernel_density
 import verify_transformations as vt
 
@@ -38,9 +37,9 @@ def find_trafos(
     """
     if round_decimals is not None:
         adjacency_matrix = adjacency_matrix.round(round_decimals)
-    bins = kernel_density.bins(adjacency_matrix, bandwidth=bandwidth, plot=True)
+    bins = kernel_density.bins(adjacency_matrix, bandwidth=bandwidth, plot=False)
     labels = np.digitize(adjacency_matrix, bins=bins)
-    unique_values, counts = np.unique(labels, return_counts=True)
+    unique_values, _ = np.unique(labels, return_counts=True)
     equivalency_classes = []
     for value in unique_values:
         s = np.argwhere(labels == value)
@@ -97,7 +96,10 @@ def calculate_trafos(
     :param result: The list containing all currently found transformations.
     :return: None
     """
+    # TODO: check if possible_mappings contains identical single_element entries
+
     if all(len(i) == 1 for i in possible_mappings):
+        # for every node, we only have one target node left - this is a complete permutation
         result.append([s.pop() for s in possible_mappings])
         matching_rates.append(1)
         if not quiet:
@@ -107,81 +109,101 @@ def calculate_trafos(
                 - vt.to_matrix(permutation) @ adjacency_matrix
             )
             print(
-                f"len(res) = {len(result)}, correctly matched all nodes. "
+                f"Permutation number {len(result)} correctly matched all nodes. "
                 f"Norm value = {norm_val}"
             )
         return
     elif any(len(i) == 0 for i in possible_mappings):
+        # for at least one node there is no target node left
+
         num_unmatchable = len([i for i in possible_mappings if len(i) == 0])
         if num_unmatchable > fault_tolerance:
+            # too many unmatched nodes
             return
+
         num_correctly_matched = len([i for i in possible_mappings if len(i) == 1])
         num_uncertain = len([i for i in possible_mappings if len(i) > 1])
         if num_uncertain == 0:
-            if num_correctly_matched >= len(possible_mappings) - fault_tolerance:
-                result.append(
-                    [s.pop() if len(s) > 0 else None for s in possible_mappings]
+            # nodes either have exactly one match target or cannot be matched at all
+            assert num_correctly_matched >= len(possible_mappings) - fault_tolerance
+
+            permutation = [s.pop() if len(s) > 0 else None for s in possible_mappings]
+            result.append(permutation)
+            matching_rates.append(num_correctly_matched / len(possible_mappings))
+
+            print("---------------------------------------------------")
+            if not quiet:
+                # compute all nodes that actually participate in the known permutation,
+                # i.e. those that are mapped onto and also map to another node
+                #cycles = combinatorics.cycles(permutation) # TODO: simplify this, e.g. via """
+                #complete_cycle_indices = []
+                #for cycle in cycles:
+                #    complete_cycle_indices.extend(cycle)
+
+                #complete_cycle_indices.sort()
+
+                complete_cycle_indices = [i for i, p in enumerate(permutation) if p is not None and i in permutation]
+                #assert complete_cycle_indices == n_complete_cycle_indices
+
+                # remove all rows and columns for nodes that are not in complete_cycles
+                reduced_coeff = adjacency_matrix[complete_cycle_indices, :]
+                reduced_coeff = reduced_coeff[:, complete_cycle_indices]
+
+                #reordered_permutation = reduced_coeff.shape[0] * [None]
+                #for index, value in enumerate(permutation):  # TODO: simplify
+                #    if index in complete_cycle_indices:
+                #        new_index = complete_cycle_indices.index(index)
+                #        entry = complete_cycle_indices.index(value)
+                #        reordered_permutation[new_index] = entry
+
+                # re-compute the permutation so that node indices are still valid after removing nodes
+                index_map = [-1] * len(permutation)
+                for new_index, old_index in enumerate(complete_cycle_indices):
+                    index_map[old_index] = new_index
+
+                reordered_permutation = [index_map[permutation[i]] for i in complete_cycle_indices]
+                #assert n_reordered_permutation == reordered_permutation
+
+                norm_val = np.linalg.norm(
+                    reduced_coeff @ vt.to_matrix(reordered_permutation)
+                    - vt.to_matrix(reordered_permutation) @ reduced_coeff
                 )
-                matching_rates.append(num_correctly_matched / len(possible_mappings))
-                permutation = result[-1]
+                print(
+                    f"len(res) = {len(result)}, correctly matched"
+                    f" {num_correctly_matched} nodes. "
+                    f"Norm value = {norm_val}"
+                )
+                print("permutation")
+                print(permutation)
+                if vt.verify_one_transformation(permutation, casename=casename):
+                    print("Permutation is legitimate")
+                else:
+                    print("Permutation is NOT legitimate.")
+
+            if use_integer_programming:
+                filled_permutation = ipt.find_permutations(
+                    A=adjacency_matrix,
+                    norm=ipt.Norm.L_1,
+                    solver=ipt.Solver.SCIP,
+                    objective_bound=1e9,
+                    time_limit=None,
+                    known_entries=permutation,
+                )
+                print("filled permutation")
+                print(filled_permutation)  # TODO: include in results (instead of original permutation above?)
                 print("---------------------------------------------------")
-                if not quiet:
-                    cycles = combinatorics.cycles(permutation)
-                    complete_cycle_indices = []
-                    for cycle in cycles:
-                        complete_cycle_indices.extend(cycle)
 
-                    complete_cycle_indices.sort()
-                    reduced_coeff = adjacency_matrix[complete_cycle_indices, :][
-                        :, complete_cycle_indices
-                    ]
+            return
 
-                    reordered_permutation = reduced_coeff.shape[0] * [None]
-                    for index, value in enumerate(permutation):
-                        if index in complete_cycle_indices:
-                            new_index = complete_cycle_indices.index(index)
-                            entry = complete_cycle_indices.index(value)
-                            reordered_permutation[new_index] = entry
-                    norm_val = np.linalg.norm(
-                        reduced_coeff @ vt.to_matrix(reordered_permutation)
-                        - vt.to_matrix(reordered_permutation) @ reduced_coeff
-                    )
-                    print(
-                        f"len(res) = {len(result)}, correctly matched"
-                        f" {num_correctly_matched} nodes. "
-                        f"Norm value = {norm_val}"
-                    )
-                    print("permutation")
-                    print(permutation)
-                    if vt.verify_one_transformation(permutation, casename=casename):
-                        print("Permutation is legitimate")
-                    else:
-                        print("Permutation is NOT legitimate.")
-                    if use_integer_programming:
-                        filled_permutation = ipt.find_permutations(
-                            A=adjacency_matrix,
-                            norm=ipt.Norm.L_1,
-                            solver=ipt.Solver.SCIP,
-                            objective_bound=1e9,
-                            time_limit=None,
-                            prevent_diagonal=True,
-                            known_entries=permutation,
-                        )
-                        print("filled permutation")
-                        print(filled_permutation)
-                        print("---------------------------------------------------")
+    node_of_shortest = -1
+    length_of_shortest = 2 * len(possible_mappings)
+    for i, m in enumerate(possible_mappings):
+        if 1 < len(m) < length_of_shortest:
+            length_of_shortest = len(m)
+            node_of_shortest = i
 
-                return
-            else:
-                assert False
-        else:
-            pass
-
-    s = min(([i for i in possible_mappings if len(i) > 1]), key=len)
-    x = possible_mappings.index(s)
-
-    for y in s:
-        new_poss = filter_perms(equivalency_classes, list(possible_mappings), x, y)
+    for potential_target in possible_mappings[node_of_shortest]:
+        new_poss = filter_perms(equivalency_classes, list(possible_mappings), node_of_shortest, potential_target)
         if new_poss == possible_mappings:
             print("This should not happen. Please assure that all self-concurrences "
                   "have fallen into the same bin.")
@@ -203,12 +225,12 @@ def calculate_trafos(
 def filter_perms(
     equivalence_classes: List[List[np.ndarray]],
     possible_mappings: List[Set],
-    x: int,
-    y: int,
+    start_node: int,
+    target_node: int,
 ) -> List[Set]:
     """
-    Filter the given list of possible mappings under the assumption that x is mapped
-    to y.
+    Filter the given list of possible mappings under the assumption that start_node is mapped
+    to target_node.
     :param equivalence_classes: A list of lists of edges which can be mapped onto
     each other freely, as they are considered to be equivalent, i.e. their weights
     fall into the same bin.
@@ -220,24 +242,23 @@ def filter_perms(
     """
     # Iterate over all possible weights w
     for equivalence_class in equivalence_classes:
-        s = set()
+        s_w = set()
 
-        # Calculate set S_w of vertices i such that (i, y) has weight w
+        # Calculate set s_w of vertices i such that the edge (i, target_node) has weight w
         for edge in equivalence_class:
-            if edge[0] == y:
-                s.add(edge[1])
-            elif edge[1] == y:
-                s.add(edge[0])
-            else:
-                continue
-        # Look for vertex z such that (x, z) has weight w
+            if edge[0] == target_node:
+                s_w.add(edge[1])
+            elif edge[1] == target_node:
+                s_w.add(edge[0])
+
+        # Look for vertex z such that edge (start_node, z) also has weight w
         for edge in equivalence_class:
-            if edge[0] == x:
+            if edge[0] == start_node:
                 z = edge[1]
-            elif edge[1] == x:
+            elif edge[1] == start_node:
                 z = edge[0]
             else:
                 continue
-            # Vertex z can only be mapped to vertices in S_w if x is mapped to y
-            possible_mappings[z] = possible_mappings[z].intersection(s)
+            # Vertex z can only be mapped to vertices in s_w if start_node is mapped to target_node
+            possible_mappings[z] = possible_mappings[z].intersection(s_w)
     return possible_mappings
