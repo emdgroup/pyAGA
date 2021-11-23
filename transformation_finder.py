@@ -96,65 +96,82 @@ def calculate_trafos(
     :param result: The list containing all currently found transformations.
     :return: None
     """
-    # TODO: check if possible_mappings contains identical single_element entries
+    number_of_matches = {
+        'impossible':  sum(1 for i in possible_mappings if len(i) == 0),
+        'perfect': sum(1 for i in possible_mappings if len(i) == 1),
+        'unsure': sum(1 for i in possible_mappings if len(i) > 1),
+    }
+    assert sum(number_of_matches.values()) == len(possible_mappings)
 
-    if all(len(i) == 1 for i in possible_mappings):
-        # for every node, we only have one target node left - this is a complete permutation
-        result.append([s.pop() for s in possible_mappings])
-        matching_rates.append(1)
-        if not quiet:
-            permutation = result[-1]
-            norm_val = np.linalg.norm(
-                adjacency_matrix @ vt.to_matrix(permutation)
-                - vt.to_matrix(permutation) @ adjacency_matrix
+    if number_of_matches['unsure'] > 0:
+        # search for the shortest remaining possible mapping...
+        node_of_shortest = -1
+        length_of_shortest = 2 * len(possible_mappings)
+        for i, m in enumerate(possible_mappings):
+            if 1 < len(m) < length_of_shortest:
+                length_of_shortest = len(m)
+                node_of_shortest = i
+        # ... and just try all candidates in there via a recursive call
+        for potential_target in possible_mappings[node_of_shortest]:
+            new_poss = filter_perms(equivalency_classes, list(possible_mappings), node_of_shortest, potential_target)
+            if new_poss == possible_mappings:
+                print("This should not happen. Please assure that all self-concurrences "
+                      "have fallen into the same bin.")
+                assert False
+            calculate_trafos(
+                adjacency_matrix,
+                equivalency_classes,
+                new_poss,
+                quiet,
+                fault_tolerance,
+                matching_rates,
+                casename,
+                use_integer_programming,
+                result,
             )
-            print(
-                f"Permutation number {len(result)} correctly matched all nodes. "
-                f"Norm value = {norm_val}"
-            )
-        return
-    elif any(len(i) == 0 for i in possible_mappings):
-        # for at least one node there is no target node left
+    else:
+        # Check if possible_mappings contains identical single_element entries
+        perfectly_matched = [list(mapping)[0] for mapping in possible_mappings if len(mapping) == 1]
+        if len(set(perfectly_matched)) < len(perfectly_matched):
+            return  # supplied possible_mappings does not allow for a valid permutation
 
-        num_unmatchable = len([i for i in possible_mappings if len(i) == 0])
-        if num_unmatchable > fault_tolerance:
-            # too many unmatched nodes
-            return
+        if number_of_matches['impossible'] == 0:
+            # for every node, we exactly have one target node left - this is a complete permutation
+            permutation = [s.pop() for s in possible_mappings]
+            result.append(permutation)
+            matching_rates.append(1)
+            if not quiet:
+                # TODO: put stuff below into a function
+                norm_val = np.linalg.norm(
+                    adjacency_matrix @ vt.to_matrix(permutation)
+                    - vt.to_matrix(permutation) @ adjacency_matrix
+                )
+                print(
+                    f"Permutation number {len(result)} correctly matched all nodes. "
+                    f"Norm value = {norm_val}"
+                )
+        else:
+            # for at least one node there is no target node left
 
-        num_correctly_matched = len([i for i in possible_mappings if len(i) == 1])
-        num_uncertain = len([i for i in possible_mappings if len(i) > 1])
-        if num_uncertain == 0:
+            if number_of_matches['impossible'] > fault_tolerance:
+                return  # number of unmatched nodes exceeds fault tolerance
+
             # nodes either have exactly one match target or cannot be matched at all
-            assert num_correctly_matched >= len(possible_mappings) - fault_tolerance
 
             permutation = [s.pop() if len(s) > 0 else None for s in possible_mappings]
             result.append(permutation)
-            matching_rates.append(num_correctly_matched / len(possible_mappings))
+            matching_rates.append(number_of_matches['perfect'] / len(possible_mappings))
 
-            print("---------------------------------------------------")
             if not quiet:
+                print("---------------------------------------------------")
                 # compute all nodes that actually participate in the known permutation,
                 # i.e. those that are mapped onto and also map to another node
-                #cycles = combinatorics.cycles(permutation) # TODO: simplify this, e.g. via """
-                #complete_cycle_indices = []
-                #for cycle in cycles:
-                #    complete_cycle_indices.extend(cycle)
-
-                #complete_cycle_indices.sort()
 
                 complete_cycle_indices = [i for i, p in enumerate(permutation) if p is not None and i in permutation]
-                #assert complete_cycle_indices == n_complete_cycle_indices
 
                 # remove all rows and columns for nodes that are not in complete_cycles
                 reduced_coeff = adjacency_matrix[complete_cycle_indices, :]
                 reduced_coeff = reduced_coeff[:, complete_cycle_indices]
-
-                #reordered_permutation = reduced_coeff.shape[0] * [None]
-                #for index, value in enumerate(permutation):  # TODO: simplify
-                #    if index in complete_cycle_indices:
-                #        new_index = complete_cycle_indices.index(index)
-                #        entry = complete_cycle_indices.index(value)
-                #        reordered_permutation[new_index] = entry
 
                 # re-compute the permutation so that node indices are still valid after removing nodes
                 index_map = [-1] * len(permutation)
@@ -162,64 +179,35 @@ def calculate_trafos(
                     index_map[old_index] = new_index
 
                 reordered_permutation = [index_map[permutation[i]] for i in complete_cycle_indices]
-                #assert n_reordered_permutation == reordered_permutation
 
+                # TODO: refactor stuff below into function, see above
                 norm_val = np.linalg.norm(
                     reduced_coeff @ vt.to_matrix(reordered_permutation)
                     - vt.to_matrix(reordered_permutation) @ reduced_coeff
                 )
                 print(
-                    f"len(res) = {len(result)}, correctly matched"
-                    f" {num_correctly_matched} nodes. "
+                    f"Incomplete permutation number {len(result)} correctly matched"
+                    f" {number_of_matches['perfect']} nodes. "
                     f"Norm value = {norm_val}"
                 )
                 print("permutation")
                 print(permutation)
-                if vt.verify_one_transformation(permutation, casename=casename):
-                    print("Permutation is legitimate")
-                else:
-                    print("Permutation is NOT legitimate.")
 
             if use_integer_programming:
-                filled_permutation = ipt.find_permutations(
-                    A=adjacency_matrix,
-                    norm=ipt.Norm.L_1,
-                    solver=ipt.Solver.SCIP,
-                    objective_bound=1e9,
-                    time_limit=None,
-                    known_entries=permutation,
-                )
-                print("filled permutation")
-                print(filled_permutation)  # TODO: include in results (instead of original permutation above?)
-                print("---------------------------------------------------")
-
-            return
-
-    node_of_shortest = -1
-    length_of_shortest = 2 * len(possible_mappings)
-    for i, m in enumerate(possible_mappings):
-        if 1 < len(m) < length_of_shortest:
-            length_of_shortest = len(m)
-            node_of_shortest = i
-
-    for potential_target in possible_mappings[node_of_shortest]:
-        new_poss = filter_perms(equivalency_classes, list(possible_mappings), node_of_shortest, potential_target)
-        if new_poss == possible_mappings:
-            print("This should not happen. Please assure that all self-concurrences "
-                  "have fallen into the same bin.")
-            assert False
-        calculate_trafos(
-            adjacency_matrix,
-            equivalency_classes,
-            new_poss,
-            quiet,
-            fault_tolerance,
-            matching_rates,
-            casename,
-            use_integer_programming,
-            result,
-        )
-    return
+                try:
+                    filled_permutation = ipt.find_permutations(
+                        A=adjacency_matrix,
+                        norm=ipt.Norm.L_1,
+                        solver=ipt.Solver.SCIP,
+                        objective_bound=1e9,
+                        time_limit=None,
+                        known_entries=permutation,
+                    )
+                    print("filled permutation")
+                    print(filled_permutation)  # TODO: include in results (instead of original permutation above?)
+                    print("---------------------------------------------------")
+                except RuntimeError:
+                    print(f'No solution found for {permutation}')
 
 
 def filter_perms(
