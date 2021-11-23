@@ -1,4 +1,3 @@
-from enum import Enum
 from typing import List, Union, Set
 
 import numpy as np
@@ -8,8 +7,8 @@ import combinatorics
 import kernel_density
 import verify_transformations as vt
 
-sys.path.append(r"C:\Users\M305822\OneDrive - MerckGroup\PycharmProjects")
-from integer_programming_for_transformations import main as ipt
+sys.path.append(r"C:\Users\M305822\OneDrive - MerckGroup\PycharmProjects\integer_programming_for_transformations")
+from mipsym import mip as ipt
 
 
 def find_trafos(
@@ -162,7 +161,7 @@ def calculate_trafos(
                         filled_permutation = ipt.find_permutations(
                             A=adjacency_matrix,
                             norm=ipt.Norm.L_1,
-                            solver=ipt.Solver.GLPK,
+                            solver=ipt.Solver.SCIP,
                             objective_bound=1e9,
                             time_limit=None,
                             prevent_diagonal=True,
