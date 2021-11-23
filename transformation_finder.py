@@ -199,8 +199,13 @@ def calculate_trafos(
                         time_limit=None,
                         known_entries=permutation,
                     )
-                    print("filled permutation")
-                    print(filled_permutation)  # TODO: include in results (instead of original permutation above?)
+
+                    print_permutation(
+                        f'Filled Permutation.',
+                        adjacency_matrix,
+                        filled_permutation
+                    )
+                    # TODO: include in results (instead of original permutation above?)
                     print("---------------------------------------------------")
                 except RuntimeError:
                     print(f'No solution found for {permutation}')
