@@ -20,6 +20,5 @@ if __name__ == '__main__':
         solver=Solver.SCIP,
         objective_bound=0.01,
         time_limit=None,
-        prevent_diagonal=True,
         known_entries=None
     )

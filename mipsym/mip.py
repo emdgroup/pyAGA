@@ -66,7 +66,7 @@ def create_permutation_combination_constraints(m, all_permutations, id):
                         todo_list.append((current_prod@power, ip, f'{name} P_{ip}^{p+1}'))
 
 
-def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, objective_bound=100, time_limit=None, prevent_diagonal=False, known_entries=None):
+def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, objective_bound=100, time_limit=None, known_entries=None):
 
     assert A.ndim == 2
     assert A.shape[0] == A.shape[1]
