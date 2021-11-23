@@ -10,6 +10,13 @@ sys.path.append(r"C:\Users\M305822\OneDrive - MerckGroup\PycharmProjects\integer
 from mipsym import mip as ipt
 
 
+def print_permutation(text: str, a: np.ndarray, perm: List[int]):
+    p = vt.to_matrix(perm)
+    print(text)
+    print(f'Error Norm  = {np.linalg.norm( a @ p - p @ a)}')
+    print(f'Permutation = {perm}')
+
+
 def find_trafos(
     adjacency_matrix: np.ndarray,
     fault_tolerance: int,
@@ -141,14 +148,10 @@ def calculate_trafos(
             result.append(permutation)
             matching_rates.append(1)
             if not quiet:
-                # TODO: put stuff below into a function
-                norm_val = np.linalg.norm(
-                    adjacency_matrix @ vt.to_matrix(permutation)
-                    - vt.to_matrix(permutation) @ adjacency_matrix
-                )
-                print(
-                    f"Permutation number {len(result)} correctly matched all nodes. "
-                    f"Norm value = {norm_val}"
+                print_permutation(
+                    f'Permutation number {len(result)} correctly matched all nodes.',
+                    adjacency_matrix,
+                    permutation
                 )
         else:
             # for at least one node there is no target node left
@@ -180,18 +183,11 @@ def calculate_trafos(
 
                 reordered_permutation = [index_map[permutation[i]] for i in complete_cycle_indices]
 
-                # TODO: refactor stuff below into function, see above
-                norm_val = np.linalg.norm(
-                    reduced_coeff @ vt.to_matrix(reordered_permutation)
-                    - vt.to_matrix(reordered_permutation) @ reduced_coeff
+                print_permutation(
+                    f'Incomplete permutation number {len(result)} correctly matched {number_of_matches["perfect"]} nodes.',
+                    reduced_coeff,
+                    reordered_permutation
                 )
-                print(
-                    f"Incomplete permutation number {len(result)} correctly matched"
-                    f" {number_of_matches['perfect']} nodes. "
-                    f"Norm value = {norm_val}"
-                )
-                print("permutation")
-                print(permutation)
 
             if use_integer_programming:
                 try:
