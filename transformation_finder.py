@@ -8,6 +8,9 @@ import verify_transformations as vt
 
 sys.path.append(r"C:\Users\M305822\OneDrive - MerckGroup\PycharmProjects\integer_programming_for_transformations")
 from mipsym import mip as ipt
+from mipsym.mip_reduced import create_reduced_mip_model
+from mipsym.mip import create_mip_solver
+from mipsym.tools import to_ndarray, to_list
 
 
 def print_permutation(text: str, a: np.ndarray, perm: List[int]):
@@ -182,6 +185,7 @@ def calculate_trafos(
                     index_map[old_index] = new_index
 
                 reordered_permutation = [index_map[permutation[i]] for i in complete_cycle_indices]
+                #TODO: assert -1 not in reordered_permutation
 
                 print_permutation(
                     f'Incomplete permutation number {len(result)} correctly matched {number_of_matches["perfect"]} nodes.',
@@ -199,25 +203,42 @@ def calculate_trafos(
                     if i not in permutation:
                         A_mask[:, i] = 1
 
-                try:
-                    filled_permutation = ipt.find_permutations(
-                        A=adjacency_matrix*A_mask,
-                        norm=ipt.Norm.L_1,
-                        solver=ipt.Solver.SCIP,
-                        objective_bound=1e9,
-                        time_limit=None,
-                        known_entries=permutation,
-                    )
+                row_index_map = [i for i, p in enumerate(permutation) if p is None]
+                col_index_map = [i for i, _ in enumerate(permutation) if i not in permutation]
+                A_row = adjacency_matrix[row_index_map, :]
+                A_col = adjacency_matrix[:, col_index_map]
 
-                    print_permutation(
-                        'Filled Permutation.',
-                        adjacency_matrix,
-                        filled_permutation
-                    )
-                    # TODO: include in results (instead of original permutation above?)
-                    print("---------------------------------------------------")
+                solver = ipt.Solver.SCIP
+                model = create_reduced_mip_model(ipt.Norm.L_INFINITY, A_row, col_index_map, A_col, row_index_map)
+                ip_solver, solve_params = create_mip_solver(solver, ipt.Norm.L_INFINITY)
+
+                try:
+                    print(f'Solving using {solver}')
+                    results = ip_solver.solve(
+                        model,
+                        tee=not quiet,
+                        timelimit=None,
+                        report_timing=True,
+                        **solve_params)
                 except RuntimeError:
                     print(f'No solution found for {permutation}')
+
+                print('Solver Result:\n' + str(results))
+
+                reduced_p = to_ndarray(model.P, len(col_index_map), len(row_index_map))
+                reduced_permutation = to_list(reduced_p)
+
+                filled_permutation = permutation[:]
+                for i, p in enumerate(reduced_permutation):
+                    assert filled_permutation[row_index_map[i]] is None
+                    filled_permutation[row_index_map[i]] = col_index_map[p]
+
+                print_permutation(
+                    'Filled Permutation.',
+                    adjacency_matrix,
+                    filled_permutation
+                )
+                # TODO: include in results (instead of original permutation above?)
 
 
 def filter_perms(
