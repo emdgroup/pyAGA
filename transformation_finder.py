@@ -190,9 +190,18 @@ def calculate_trafos(
                 )
 
             if use_integer_programming:
+                # entries in the adjacency matrix that correspond to known parts of the permutation
+                # can be zeroed to reduce number of coefficients in the mip problem
+                A_mask = np.zeros_like(adjacency_matrix)
+                for i, p in enumerate(permutation):
+                    if p is None:
+                        A_mask[i, :] = 1
+                    if i not in permutation:
+                        A_mask[:, i] = 1
+
                 try:
                     filled_permutation = ipt.find_permutations(
-                        A=adjacency_matrix,
+                        A=adjacency_matrix*A_mask,
                         norm=ipt.Norm.L_1,
                         solver=ipt.Solver.SCIP,
                         objective_bound=1e9,
