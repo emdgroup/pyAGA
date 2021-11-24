@@ -101,6 +101,7 @@ def create_mip_model(norm: Norm, A: np.ndarray):
 
     return model
 
+
 def create_mip_solver(solver: Solver, norm: Norm):
     if solver == Solver.GLPK:
         solver_factory_params = dict(_name='glpk')
@@ -201,7 +202,6 @@ def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, o
     model = create_mip_model(norm, A)
     if known_entries is not None:
         fix_known_entries(model, known_entries)
-
 
     id = np.eye(n_nodes, dtype=int)
 
