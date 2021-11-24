@@ -166,7 +166,7 @@ def calculate_trafos(
             # nodes either have exactly one match target or cannot be matched at all
 
             permutation = [s.pop() if len(s) > 0 else None for s in possible_mappings]
-            result.append(permutation)
+            #result.append(permutation)
             matching_rates.append(number_of_matches['perfect'] / len(possible_mappings))
 
             if not quiet:
@@ -235,6 +235,7 @@ def calculate_trafos(
                     adjacency_matrix,
                     filled_permutation
                 )
+                result.append(filled_permutation)
                 # TODO: include in results (instead of original permutation above?)
 
 

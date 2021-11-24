@@ -1,6 +1,6 @@
 import numpy as np
 from transformation_finder import find_trafos
-from verify_transformations import verify_transformations
+from mipsym.tools import to_matrix, matshow
 import pickle
 
 # world_name = "two_letter_words_20x10"
@@ -11,6 +11,7 @@ trafo_round_decimals = 4
 trafo_fault_tolerance_ratio = 0.25
 kde_bandwidth = 1e-3
 use_integer_programming = True
+quiet = False
 
 if integer_matrices:
     mat_filename = f"data/{world_name}_integers_concurrence_matrix_{percentage}.pickle"
@@ -33,7 +34,10 @@ with open(mat_filename, "rb") as correlation_matrix_file:
         casename=world_name,
         use_integer_programming=use_integer_programming
     )
-    num_valid_trafos = verify_transformations(trafos, world_name)
 
-    print(f"num_valid_trafos = {num_valid_trafos}")
-    # pickle.dump(trafos, trafos_file)
+if not quiet:
+    print(f"Total number of found trafos {len(trafos)}")
+    for i,trafo in enumerate(trafos):
+        matrix = to_matrix(trafo)
+        print(f'Printing permutation number {i+1}')
+        print(matshow(matrix))
