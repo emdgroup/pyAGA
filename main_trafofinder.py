@@ -1,4 +1,4 @@
-from pattern_finder import *
+import numpy as np
 from transformation_finder import find_trafos
 from verify_transformations import verify_transformations
 import pickle
@@ -7,11 +7,10 @@ import pickle
 world_name = "one_letter_words_10x5"
 percentage = "98.0"
 integer_matrices = False
-# world_name = "one_letter_words_10x5"
 trafo_round_decimals = 4
 trafo_fault_tolerance_ratio = 0.25
 kde_bandwidth = 1e-3
-use_integer_programming=True
+use_integer_programming = True
 
 if integer_matrices:
     mat_filename = f"data/{world_name}_integers_concurrence_matrix_{percentage}.pickle"
