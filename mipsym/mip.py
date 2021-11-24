@@ -101,6 +101,55 @@ def create_mip_model(norm: Norm, A: np.ndarray):
 
     return model
 
+def create_mip_solver(solver: Solver, norm: Norm):
+    if solver == Solver.GLPK:
+        solver_factory_params = dict(_name='glpk')
+        solver_executable = []
+        solver_options = dict(fpump='')
+        solve_params = dict()
+    elif solver == Solver.IPOPT:
+        solver_factory_params = dict(_name='mindtpy')
+        solver_executable = []
+        solver_options = dict()
+        solve_params = dict(mip_solver='glpk', nlp_solver='ipopt')
+    elif solver == Solver.HiGHS:
+        solver_factory_params = dict(_name='highs')
+        solver_executable = [
+            '/Users/m290886/Downloads/HiGHS.v1.1.0.x86_64-apple-darwin/bin/highs',
+        ]
+        solver_options = dict()
+        solve_params = dict()
+    elif solver == Solver.SCIP:
+        solver_factory_params = dict(_name='scip')
+        solver_executable = [
+            'C:/Program Files/SCIPOptSuite 7.0.3/bin/scip',
+            '/Users/m290886/Downloads/SCIPOptSuite-7.0.3-Darwin/bin/scip',
+        ]
+        solver_options = dict()
+        solve_params = dict()
+    else:
+        raise ValueError(f'Unsupported solver {solver}')
+
+    logger.debug(f'Creating Solver using params {solver_factory_params}')
+    ip_solver = po.SolverFactory(**solver_factory_params)
+
+    for executable in solver_executable:
+        try:
+            ip_solver.set_executable(executable, validate=True)
+        except ValueError:
+            continue
+
+        logger.debug(f'Using Solver Executable {executable}')
+        break
+
+    ip_solver.options = solver_options
+
+    if norm == Norm.L_2:
+        assert solver in (Solver.IPOPT, Solver.SCIP)
+        ip_solver.set_problem_format(ProblemFormat.mps)
+
+    return ip_solver, solve_params
+
 
 def fix_known_entries(model, known_entries):
     for index, value in enumerate(known_entries):
@@ -148,55 +197,11 @@ def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, o
 
     n_nodes = A.shape[0]
 
-    if solver == Solver.GLPK:
-        solver_factory_params = dict(_name='glpk')
-        solver_executable = []
-        solver_options = dict(fpump='')
-        solve_params = dict()
-    elif solver == Solver.IPOPT:
-        solver_factory_params = dict(_name='mindtpy')
-        solver_executable = []
-        solver_options = dict()
-        solve_params = dict(mip_solver='glpk', nlp_solver='ipopt')
-    elif solver == Solver.HiGHS:
-        solver_factory_params = dict(_name='highs')
-        solver_executable = [
-            '/Users/m290886/Downloads/HiGHS.v1.1.0.x86_64-apple-darwin/bin/highs',
-        ]
-        solver_options = dict()
-        solve_params = dict()
-    elif solver == Solver.SCIP:
-        solver_factory_params = dict(_name='scip')
-        solver_executable = [
-            'C:/Program Files/SCIPOptSuite 7.0.3/bin/scip',
-            '/Users/m290886/Downloads/SCIPOptSuite-7.0.3-Darwin/bin/scip',
-        ]
-        solver_options = dict()
-        solve_params = dict()
-    else:
-        raise ValueError(f'Unsupported solver {solver}')
-
-    logger.debug(f'Creating Solver using params {solver_factory_params}')
-    ip_solver = po.SolverFactory(**solver_factory_params)
-
-    for executable in solver_executable:
-        try:
-            ip_solver.set_executable(executable, validate=True)
-        except ValueError:
-            continue
-
-        logger.debug(f'Using Solver Executable {executable}')
-        break
-
-    ip_solver.options = solver_options
-
+    ip_solver, solve_params = create_mip_solver(solver, norm)
     model = create_mip_model(norm, A)
     if known_entries is not None:
         fix_known_entries(model, known_entries)
 
-    if norm == Norm.L_2:
-        assert solver in (Solver.IPOPT, Solver.SCIP)
-        ip_solver.set_problem_format(ProblemFormat.mps)
 
     id = np.eye(n_nodes, dtype=int)
 
