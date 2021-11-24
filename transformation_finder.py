@@ -201,7 +201,7 @@ def calculate_trafos(
                     )
 
                     print_permutation(
-                        f'Filled Permutation.',
+                        'Filled Permutation.',
                         adjacency_matrix,
                         filled_permutation
                     )
