@@ -7,6 +7,7 @@ import kernel_density
 import verify_transformations as vt
 
 sys.path.append(r"C:\Users\M305822\OneDrive - MerckGroup\PycharmProjects\integer_programming_for_transformations")
+sys.path.append(r"C:\Users\M290244@eu.merckgroup.com\OneDrive - MerckGroup\Programming\integer_programming_for_transformations")
 from mipsym import mip as ipt
 from mipsym.mip_reduced import create_reduced_mip_model
 from mipsym.mip import create_mip_solver
@@ -196,6 +197,7 @@ def calculate_trafos(
             if use_integer_programming:
                 # entries in the adjacency matrix that correspond to known parts of the permutation
                 # can be zeroed to reduce number of coefficients in the mip problem
+                # This will not be necessary once we are able to work with the reduced MIP
                 A_mask = np.zeros_like(adjacency_matrix)
                 for i, p in enumerate(permutation):
                     if p is None:
@@ -203,11 +205,15 @@ def calculate_trafos(
                     if i not in permutation:
                         A_mask[:, i] = 1
 
+                # Construct a reduced MIP only containing rows/cols that are still not resolved
+                # Mappings for identifying the rows/cols of the reduced problem and corresponding matrices
                 row_index_map = [i for i, p in enumerate(permutation) if p is None]
                 col_index_map = [i for i, _ in enumerate(permutation) if i not in permutation]
                 A_row = adjacency_matrix[row_index_map, :]
                 A_col = adjacency_matrix[:, col_index_map]
 
+                # Solve the reduced problem
+                # Currently WIP, not fully integrated yet
                 solver = ipt.Solver.SCIP
                 model = create_reduced_mip_model(ipt.Norm.L_INFINITY, A_row, col_index_map, A_col, row_index_map)
                 ip_solver, solve_params = create_mip_solver(solver, ipt.Norm.L_INFINITY)
