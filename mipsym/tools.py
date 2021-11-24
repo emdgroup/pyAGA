@@ -1,5 +1,20 @@
 import numpy as np
 
+def to_matrix(trafo) -> np.ndarray:
+    """
+    Turn a given list format permutation into a matrix.
+    :param trafo: The permutation in the list format.
+    :return: The permutation in the matrix format (as a np array).
+    """
+    matrix = np.zeros((len(trafo), len(trafo)))
+    for index, value in enumerate(trafo):
+        if value is not None:
+            matrix[index, value] = 1
+        else:
+            matrix[index, :] = 0  # Setting this to 0 is unnecessary, but I will leave
+            # this line in case one wants to set it to some other value for
+            # visualization.
+    return matrix
 
 def to_ndarray(v, m, n, dtype=int) -> np.ndarray:
     # Convert pyomo variable to numpy array

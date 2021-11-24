@@ -8017,7 +8017,7 @@ class SCIP_Shell(SystemCallSolver):
 
         cmd.extend(['-s', self._options_file])
         cmd.extend(['-c', 'set heuristics emphasis aggressive'])
-        cmd.extend(['-c', 'set presolving emphasis aggressive'])
+        # cmd.extend(['-c', 'set presolving emphasis aggressive'])
         # cmd.extend(['-c', 'set separation emphasis aggressive'])
         cmd.extend(['-c', f'read {problem_files[0]}'])
         cmd.extend(['-c', 'optimize'])
