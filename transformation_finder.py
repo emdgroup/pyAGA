@@ -195,15 +195,6 @@ def calculate_trafos(
                 )
 
             if use_integer_programming:
-                # entries in the adjacency matrix that correspond to known parts of the permutation
-                # can be zeroed to reduce number of coefficients in the mip problem
-                # This will not be necessary once we are able to work with the reduced MIP
-                A_mask = np.zeros_like(adjacency_matrix)
-                for i, p in enumerate(permutation):
-                    if p is None:
-                        A_mask[i, :] = 1
-                    if i not in permutation:
-                        A_mask[:, i] = 1
 
                 # Construct a reduced MIP only containing rows/cols that are still not resolved
                 # Mappings for identifying the rows/cols of the reduced problem and corresponding matrices
