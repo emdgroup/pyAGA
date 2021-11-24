@@ -115,6 +115,19 @@ def create_reduced_mip_model(
         logger.debug('Creating Constraints to Limit Negative Deviation')
         model.negDev_row = po.Constraint(model.U, model.N, rule=lambda m, i, j: -m.T <= deviation_A_row(m, i, j))
         model.negDev_col = po.Constraint(model.N, model.U, rule=lambda m, i, j: -m.T <= deviation_A_col(m, i, j))
+    elif norm == Norm.L_1:
+        logger.debug('Creating Upper Limit Variable for the Maximum Error')
+        model.T = po.Var(model.U, model.N, within=po.NonNegativeReals)
+
+        logger.debug('Creating Objective Function to Minimize L_INFINITY Norm of Deviation')
+        model.objective = po.Objective(expr = sum(model.T[i,j] for i in model.U for j in model.N), sense=po.minimize)
+
+        logger.debug('Creating Constraints to Limit Positive Deviation')
+        model.posDev_row = po.Constraint(model.U, model.N, rule=lambda m, i, j: deviation_A_row(m, i, j) <= m.T[i,j])
+        model.posDev_col = po.Constraint(model.N, model.U, rule=lambda m, i, j: deviation_A_col(m, i, j) <= m.T[j,i])
+        logger.debug('Creating Constraints to Limit Negative Deviation')
+        model.negDev_row = po.Constraint(model.U, model.N, rule=lambda m, i, j: -m.T[i,j] <= deviation_A_row(m, i, j))
+        model.negDev_col = po.Constraint(model.N, model.U, rule=lambda m, i, j: -m.T[j,i] <= deviation_A_col(m, i, j))
     else:
         raise ValueError(f'Unsupported Norm {norm}.')
 
