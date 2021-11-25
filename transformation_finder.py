@@ -8,16 +8,16 @@ import verify_transformations as vt
 
 sys.path.append(r"C:\Users\M305822\OneDrive - MerckGroup\PycharmProjects\integer_programming_for_transformations")
 sys.path.append(r"C:\Users\M290244@eu.merckgroup.com\OneDrive - MerckGroup\Programming\integer_programming_for_transformations")
-from mipsym import mip as ipt
+from mipsym.mip import Norm, Solver
 from mipsym.mip_reduced import create_reduced_mip_model
 from mipsym.mip import create_mip_solver
-from mipsym.tools import to_ndarray, to_list, to_matrix, matshow
+from mipsym.tools import to_ndarray, to_list, to_matrix, matshow, deviation_value
 
 
-def print_permutation(text: str, a: np.ndarray, perm: List[int]):
+def print_permutation(text: str, norm: Norm, a: np.ndarray, perm: List[int]):
     p = vt.to_matrix(perm)
     print(text)
-    print(f'Error Norm  = {np.linalg.norm( a @ p - p @ a)}')
+    print(f'Error Norm  = {deviation_value(norm, p, a)}')
     print(f'Permutation = {perm}')
 
 
@@ -28,6 +28,7 @@ def find_trafos(
     quiet: bool,
     bandwidth: float,
     casename: str,
+    norm: Norm,
     use_integer_programming,
 ) -> List[List[Union[int, None]]]:
     """
@@ -71,6 +72,7 @@ def find_trafos(
         fault_tolerance,
         matching_rates,
         casename,
+        norm,
         use_integer_programming,
         trafos,
     )
@@ -85,6 +87,7 @@ def calculate_trafos(
     fault_tolerance: int,
     matching_rates: List[float],
     casename: str,
+    norm: Norm,
     use_integer_programming: bool,
     result: List[List[Union[int, None]]],
 ) -> None:
@@ -137,6 +140,7 @@ def calculate_trafos(
                 fault_tolerance,
                 matching_rates,
                 casename,
+                norm,
                 use_integer_programming,
                 result,
             )
@@ -153,7 +157,8 @@ def calculate_trafos(
             matching_rates.append(1)
             if not quiet:
                 print_permutation(
-                    f'Permutation number {len(result)} correctly matched all nodes.',
+                    f'Permutation number {len(result)} matched all nodes.',
+                    norm,
                     adjacency_matrix,
                     permutation
                 )
@@ -170,11 +175,11 @@ def calculate_trafos(
             matching_rate = number_of_matches['perfect'] / len(possible_mappings)
 
             if not quiet:
-                print(f'Incomplete permutation number {len(result)} correctly matched {number_of_matches["perfect"]} nodes.')
+                print(f'Incomplete permutation number {len(result)} matched {number_of_matches["perfect"]} nodes.')
                 print(permutation)
 
             if use_integer_programming:
-                print(f'Trying to fill missing entries in permutation using MIP')
+                print('Trying to fill missing entries in permutation using MIP')
 
                 # Construct a reduced MIP only containing rows/cols that are still not resolved
                 # Mappings for identifying the rows/cols of the reduced problem and corresponding matrices
@@ -187,7 +192,7 @@ def calculate_trafos(
                 
                 tmp_filled_permutation = permutation[:]
                 for i in range(len(col_index_map)):
-                    tmp_filled_permutation[row_index_map[i]] = col_index_map[i] 
+                    tmp_filled_permutation[row_index_map[i]] = col_index_map[i]
                     
                 tmp_p_matrix = to_matrix(tmp_filled_permutation)
                 
@@ -198,9 +203,9 @@ def calculate_trafos(
 
                 # Solve the reduced problem
                 # Currently WIP, not fully integrated yet
-                solver = ipt.Solver.SCIP
-                model = create_reduced_mip_model(ipt.Norm.L_INFINITY, A_row_l, A_row_r, col_index_map, A_col_l, A_col_r, row_index_map, permutation)
-                ip_solver, solve_params = create_mip_solver(solver, ipt.Norm.L_INFINITY)
+                solver = Solver.SCIP
+                model = create_reduced_mip_model(norm, A_row_l, A_row_r, col_index_map, A_col_l, A_col_r, row_index_map, permutation)
+                ip_solver, solve_params = create_mip_solver(solver, norm)
 
                 try:
                     print(f'Solving using {solver}')
@@ -221,7 +226,7 @@ def calculate_trafos(
 
                     if not quiet:
                         print('Solver Result:\n' + str(results))
-                        print_permutation('Filled Permutation.', adjacency_matrix, filled_permutation)
+                        print_permutation('Filled Permutation.', norm, adjacency_matrix, filled_permutation)
 
                     permutation = filled_permutation
                     matching_rate = 1

@@ -12,11 +12,15 @@ trafo_fault_tolerance_ratio = 0.25
 kde_bandwidth = 1e-3
 use_integer_programming = True
 quiet = False
+norm = Norm.L_INFINITY
+error_value_limit = 0.007
+
 
 if integer_matrices:
     mat_filename = f"data/{world_name}_integers_concurrence_matrix_{percentage}.pickle"
 else:
     mat_filename = f"data/{world_name}_concurrence_matrix_{percentage}.pickle"
+
 
 with open(mat_filename, "rb") as correlation_matrix_file:
     print(f"Loading matrix {mat_filename}")
@@ -32,6 +36,7 @@ with open(mat_filename, "rb") as correlation_matrix_file:
         quiet=False,
         bandwidth=kde_bandwidth,
         casename=world_name,
+        norm=norm,
         use_integer_programming=use_integer_programming
     )
 
