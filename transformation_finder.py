@@ -49,7 +49,7 @@ def find_trafos(
     """
     if round_decimals is not None:
         adjacency_matrix = adjacency_matrix.round(round_decimals)
-    bins = kernel_density.bins(adjacency_matrix, bandwidth=bandwidth, plot=False)
+    bins = kernel_density.bins(adjacency_matrix, bandwidth=bandwidth, plot=not quiet)
     labels = np.digitize(adjacency_matrix, bins=bins)
     unique_values, _ = np.unique(labels, return_counts=True)
     equivalency_classes = []
