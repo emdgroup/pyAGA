@@ -14,8 +14,9 @@ logger.setLevel(level=logging.DEBUG)  # set to logging.INFO for less, to logging
 
 def create_reduced_mip_model(
     norm: Norm,
-    A_row: np.ndarray, col_index_map: List[int],
-    A_col: np.ndarray, row_index_map: List[int],
+    A_row_l: np.ndarray, A_row_r, col_index_map: List[int],
+    A_col_l: np.ndarray, A_col_r, row_index_map: List[int],
+    permutation
 ):
     """
     Create a reduced MIP model that only contains variables that still need to be fixed
@@ -24,15 +25,16 @@ def create_reduced_mip_model(
     :param col_index: List s.t. the i-th entry is the index of the i-th row of A_row w.r.t. the original matrix
     :param A_col: Adjacency matrix containing only columns corresponding to nodes which are no targets
     :param row_index: List s.t. the i-th entry is the index of the i-th column of A_col w.r.t. the original matrix
+    :param permutation: The incomplete permutation
     :return: The model
     """
     assert isinstance(norm, Norm)
-    assert A_row.ndim == 2
+    #assert A_row.ndim == 2
 
-    n_unknowns = A_row.shape[0]
-    n_nodes = A_row.shape[1]
-    assert n_unknowns == A_col.shape[1]
-    assert n_nodes == A_col.shape[0]
+    n_unknowns = A_row_l.shape[0]
+    n_nodes = A_row_l.shape[1]
+    assert n_unknowns == A_col_l.shape[1]
+    assert n_nodes == A_col_l.shape[0]
     assert len(col_index_map) == n_unknowns
     assert len(row_index_map) == n_unknowns
 
@@ -43,8 +45,10 @@ def create_reduced_mip_model(
     model.N = po.Set(initialize=range(n_nodes))
 
     logger.debug('Creating Parameter for Concurrence Matrices')
-    model.A_row = po.Param(model.U, model.N, initialize=lambda m, i, j: A_row[i, j], within=po.NonNegativeReals)
-    model.A_col = po.Param(model.N, model.U, initialize=lambda m, i, j: A_col[i, j], within=po.NonNegativeReals)
+    model.A_row_l = po.Param(model.U, model.N, initialize=lambda m, i, j: A_row_l[i, j], within=po.NonNegativeReals)
+    model.A_col_l = po.Param(model.N, model.U, initialize=lambda m, i, j: A_col_l[i, j], within=po.NonNegativeReals)
+    model.A_row_r = po.Param(model.U, model.N, initialize=lambda m, i, j: A_row_r[i, j], within=po.NonNegativeReals)
+    model.A_col_r = po.Param(model.N, model.U, initialize=lambda m, i, j: A_col_r[i, j], within=po.NonNegativeReals)
 
     logger.debug('Creating Boolean Permutation Matrix')
     model.P = po.Var(model.U, model.U, within=po.Boolean)
@@ -63,10 +67,7 @@ def create_reduced_mip_model(
         :param i: Row index
         :param j: Column index
         """
-        #  (P @ A_row - A_row @ P)_ij       i in m.U, j in m.N
-        P_times_A_ij = sum(m.P[i, k] * m.A_row[k, j] for k in m.U)
-
-        # A_row =
+                # A_row =
         #  | 11 12 13 14 15 |
         #  | 21 22 23 24 25 |
         #  | 31 32 33 34 35 |
@@ -82,8 +83,10 @@ def create_reduced_mip_model(
         #  | 11 15 12 14 13 |
         #  | 21 25 22 24 23 |
         #  | 31 35 32 34 33 |
-
-        A_times_P_ij = A_row[i, j] if j not in col_index_map else sum(m.A_row[i, col_index_map[k]] * m.P[k, col_index_map.index(j)] for k in m.U)
+        
+        #  (P @ A_row_l - A_row_r @ P)_ij       i in m.U, j in m.N
+        P_times_A_ij = sum(m.P[i, k] * m.A_row_l[k, j] for k in m.U)
+        A_times_P_ij = A_row_r[i, j] if j not in col_index_map else sum(m.A_row_r[i, col_index_map[k]] * m.P[k, col_index_map.index(j)] for k in m.U)
 
         return P_times_A_ij - A_times_P_ij
 
@@ -96,9 +99,9 @@ def create_reduced_mip_model(
         :param i: Row index
         :param j: Column index
         """
-        #  (P @ A_col - A_col @ P)_ij       i in m.N, j in m.U
-        P_times_A_ij = A_col[i, j] if i not in row_index_map else sum(m.P[row_index_map.index(i), k] * m.A_col[row_index_map[k], j] for k in m.U)
-        A_times_P_ij = sum(m.A_col[i, k] * m.P[k, j] for k in m.U)
+        #  (P @ A_col_l - A_col_r @ P)_ij       i in m.N, j in m.U
+        P_times_A_ij = A_col_l[i, j] if i not in row_index_map else sum(m.P[row_index_map.index(i), k] * m.A_col_l[row_index_map[k], j] for k in m.U)
+        A_times_P_ij = sum(m.A_col_r[i, k] * m.P[k, j] for k in m.U)
 
         return P_times_A_ij - A_times_P_ij
 
