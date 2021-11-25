@@ -3,9 +3,9 @@ from transformation_finder import find_trafos
 from mipsym.tools import to_matrix, matshow
 import pickle
 
-world_name = "two_letter_words_20x10"
-#world_name = "one_letter_words_10x5"
-percentage = "75.0"
+#world_name = "two_letter_words_20x10"
+world_name = "one_letter_words_10x5"
+percentage = "98.0"
 integer_matrices = False
 trafo_round_decimals = 4
 trafo_fault_tolerance_ratio = 0.25
@@ -42,7 +42,7 @@ with open(mat_filename, "rb") as correlation_matrix_file:
 
 if not quiet:
     print(f"Total number of found trafos {len(trafos)}")
-    for i,trafo in enumerate(trafos):
+    for i, trafo in enumerate(trafos):
         matrix = to_matrix(trafo)
         print(f'Printing permutation number {i+1}')
         print(matshow(matrix))
