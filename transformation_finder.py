@@ -11,7 +11,7 @@ sys.path.append(r"C:\Users\M290244@eu.merckgroup.com\OneDrive - MerckGroup\Progr
 from mipsym import mip as ipt
 from mipsym.mip_reduced import create_reduced_mip_model
 from mipsym.mip import create_mip_solver
-from mipsym.tools import to_ndarray, to_list
+from mipsym.tools import to_ndarray, to_list, to_matrix, matshow
 
 
 def print_permutation(text: str, a: np.ndarray, perm: List[int]):
@@ -198,15 +198,28 @@ def calculate_trafos(
 
                 # Construct a reduced MIP only containing rows/cols that are still not resolved
                 # Mappings for identifying the rows/cols of the reduced problem and corresponding matrices
+                
                 row_index_map = [i for i, p in enumerate(permutation) if p is None]
                 col_index_map = [i for i, _ in enumerate(permutation) if i not in permutation]
-                A_row = adjacency_matrix[row_index_map, :]
-                A_col = adjacency_matrix[:, col_index_map]
+                
+                # Calculate a temporary complete permutation that assigns unmapped vertices in some way
+                # Idea is to apply this to the adjacency matrix s.t. one obtains correctly permuted A_row, A_col
+                
+                tmp_filled_permutation = permutation[:]
+                for i in range(len(col_index_map)):
+                    tmp_filled_permutation[row_index_map[i]] = col_index_map[i] 
+                    
+                tmp_p_matrix = to_matrix(tmp_filled_permutation)
+                
+                A_row_l = (tmp_p_matrix@adjacency_matrix)[row_index_map, :]
+                A_row_r = (adjacency_matrix@tmp_p_matrix)[row_index_map, :]
+                A_col_l = (tmp_p_matrix@adjacency_matrix)[:, col_index_map]
+                A_col_r = (adjacency_matrix@tmp_p_matrix)[:, col_index_map]
 
                 # Solve the reduced problem
                 # Currently WIP, not fully integrated yet
                 solver = ipt.Solver.SCIP
-                model = create_reduced_mip_model(ipt.Norm.L_INFINITY, A_row, col_index_map, A_col, row_index_map)
+                model = create_reduced_mip_model(ipt.Norm.L_INFINITY, A_row_l, A_row_r, col_index_map, A_col_l, A_col_r, row_index_map, permutation)
                 ip_solver, solve_params = create_mip_solver(solver, ipt.Norm.L_INFINITY)
 
                 try:
@@ -220,7 +233,7 @@ def calculate_trafos(
                 except RuntimeError:
                     print(f'No solution found for {permutation}')
 
-                print('Solver Result:\n' + str(results))
+                print('Solver Result:\n' + str(results))                
 
                 reduced_p = to_ndarray(model.P, len(col_index_map), len(row_index_map))
                 reduced_permutation = to_list(reduced_p)
@@ -236,6 +249,7 @@ def calculate_trafos(
                     filled_permutation
                 )
                 result.append(filled_permutation)
+                print(matshow(to_matrix(filled_permutation)))
                 # TODO: include in results (instead of original permutation above?)
 
 

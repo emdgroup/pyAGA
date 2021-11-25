@@ -3,9 +3,9 @@ from transformation_finder import find_trafos
 from mipsym.tools import to_matrix, matshow
 import pickle
 
-# world_name = "two_letter_words_20x10"
-world_name = "one_letter_words_10x5"
-percentage = "98.0"
+world_name = "two_letter_words_20x10"
+#world_name = "one_letter_words_10x5"
+percentage = "75.0"
 integer_matrices = False
 trafo_round_decimals = 4
 trafo_fault_tolerance_ratio = 0.25
