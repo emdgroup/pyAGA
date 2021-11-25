@@ -1,4 +1,23 @@
 import numpy as np
+from typing import Tuple
+
+
+def deviation_value(norm: 'Norm', P: np.ndarray, A: np.ndarray):
+    from mipsym.mip import Norm
+    if norm == Norm.L_INFINITY:
+        return np.max(np.abs(P @ A - A @ P))
+    elif norm == Norm.L_1:
+        return np.sum(np.abs(P @ A - A @ P))
+    elif norm == Norm.L_2:
+        return np.sum((P @ A - A @ P)**2)
+
+
+def hash_array(arr: np.ndarray) -> Tuple[int]:
+    # Create a tuple with the indices of nonzero entries in arr
+    # This is unique for each permuation matrix and can be used
+    # e.g. as a key in a dict
+    return tuple(np.nonzero(arr.flatten())[0])
+
 
 def to_matrix(trafo) -> np.ndarray:
     """
@@ -15,6 +34,7 @@ def to_matrix(trafo) -> np.ndarray:
             # this line in case one wants to set it to some other value for
             # visualization.
     return matrix
+
 
 def to_ndarray(v, m, n, dtype=int) -> np.ndarray:
     # Convert pyomo variable to numpy array

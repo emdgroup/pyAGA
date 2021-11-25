@@ -4,13 +4,11 @@ from itertools import count
 import logging
 import time
 
-from typing import Tuple
-
 import numpy as np
 import pyomo.environ as po
 from pyomo.opt import ProblemFormat, SolverStatus, TerminationCondition
 
-from mipsym.tools import matshow, matshow_pyomo, to_ndarray, to_list
+from mipsym.tools import matshow, matshow_pyomo, to_ndarray, to_list, hash_array, deviation_value
 from mipsym import highs  # noqa: F401
 from mipsym import scip  # noqa: F401
 
@@ -30,13 +28,6 @@ class Solver(Enum):
     IPOPT = 1
     HiGHS = 2
     SCIP = 3
-
-
-def hash_array(arr: np.ndarray) -> Tuple[int]:
-    # Create a tuple with the indices of nonzero entries in arr
-    # This is unique for each permuation matrix and can be used
-    # e.g. as a key in a dict
-    return tuple(np.nonzero(arr.flatten())[0])
 
 
 def create_mip_model(norm: Norm, A: np.ndarray):
@@ -246,13 +237,7 @@ def find_permutations(A: np.ndarray, norm: Norm, solver: Solver = Solver.GLPK, o
         permutation = to_ndarray(model.P, n_nodes, n_nodes)
 
         logger.info(f'P_{i_result} =\n' + matshow(permutation))
-
-        if norm == Norm.L_INFINITY:
-            logger.info(f'Deviation Value: {np.max(np.abs(permutation @ A - A @ permutation))}')
-        elif norm == Norm.L_1:
-            logger.info(f'Deviation Value: {np.sum(np.abs(permutation @ A - A @ permutation))}')
-        elif norm == Norm.L_2:
-            logger.info(f'Deviation Value: {np.sum((permutation @ A - A @ permutation)**2)}')
+        logger.info(f'Deviation Value: {deviation_value(norm, permutation, A)}')
 
         if np.array_equal(permutation, previous_permutation) and time_limit:
             logger.debug('The same permutation was found twice; aborting computation')
