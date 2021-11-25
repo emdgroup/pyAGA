@@ -157,6 +157,7 @@ def calculate_trafos(
                     adjacency_matrix,
                     permutation
                 )
+                print(matshow(to_matrix(permutation)))
         else:
             # for at least one node there is no target node left
 
@@ -166,35 +167,14 @@ def calculate_trafos(
             # nodes either have exactly one match target or cannot be matched at all
 
             permutation = [s.pop() if len(s) > 0 else None for s in possible_mappings]
-            #result.append(permutation)
-            matching_rates.append(number_of_matches['perfect'] / len(possible_mappings))
+            matching_rate = number_of_matches['perfect'] / len(possible_mappings)
 
             if not quiet:
-                print("---------------------------------------------------")
-                # compute all nodes that actually participate in the known permutation,
-                # i.e. those that are mapped onto and also map to another node
-
-                complete_cycle_indices = [i for i, p in enumerate(permutation) if p is not None and i in permutation]
-
-                # remove all rows and columns for nodes that are not in complete_cycles
-                reduced_coeff = adjacency_matrix[complete_cycle_indices, :]
-                reduced_coeff = reduced_coeff[:, complete_cycle_indices]
-
-                # re-compute the permutation so that node indices are still valid after removing nodes
-                index_map = [-1] * len(permutation)
-                for new_index, old_index in enumerate(complete_cycle_indices):
-                    index_map[old_index] = new_index
-
-                reordered_permutation = [index_map[permutation[i]] for i in complete_cycle_indices]
-                #TODO: assert -1 not in reordered_permutation
-
-                print_permutation(
-                    f'Incomplete permutation number {len(result)} correctly matched {number_of_matches["perfect"]} nodes.',
-                    reduced_coeff,
-                    reordered_permutation
-                )
+                print(f'Incomplete permutation number {len(result)} correctly matched {number_of_matches["perfect"]} nodes.')
+                print(permutation)
 
             if use_integer_programming:
+                print(f'Trying to fill missing entries in permutation using MIP')
 
                 # Construct a reduced MIP only containing rows/cols that are still not resolved
                 # Mappings for identifying the rows/cols of the reduced problem and corresponding matrices
@@ -230,27 +210,31 @@ def calculate_trafos(
                         timelimit=None,
                         report_timing=True,
                         **solve_params)
+
+                    reduced_p = to_ndarray(model.P, len(col_index_map), len(row_index_map))
+                    reduced_permutation = to_list(reduced_p)
+
+                    filled_permutation = permutation[:]
+                    for i, p in enumerate(reduced_permutation):
+                        assert filled_permutation[row_index_map[i]] is None
+                        filled_permutation[row_index_map[i]] = col_index_map[p]
+
+                    if not quiet:
+                        print('Solver Result:\n' + str(results))
+                        print_permutation('Filled Permutation.', adjacency_matrix, filled_permutation)
+
+                    permutation = filled_permutation
+                    matching_rate = 1
+
                 except RuntimeError:
                     print(f'No solution found for {permutation}')
+                    print('Solver Result:\n' + str(results))
 
-                print('Solver Result:\n' + str(results))                
+            result.append(permutation)
+            matching_rates.append(matching_rate)
 
-                reduced_p = to_ndarray(model.P, len(col_index_map), len(row_index_map))
-                reduced_permutation = to_list(reduced_p)
-
-                filled_permutation = permutation[:]
-                for i, p in enumerate(reduced_permutation):
-                    assert filled_permutation[row_index_map[i]] is None
-                    filled_permutation[row_index_map[i]] = col_index_map[p]
-
-                print_permutation(
-                    'Filled Permutation.',
-                    adjacency_matrix,
-                    filled_permutation
-                )
-                result.append(filled_permutation)
-                print(matshow(to_matrix(filled_permutation)))
-                # TODO: include in results (instead of original permutation above?)
+            if not quiet:
+                print(matshow(to_matrix(permutation)))
 
 
 def filter_perms(
