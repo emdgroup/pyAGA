@@ -14,22 +14,28 @@ logger.setLevel(level=logging.DEBUG)  # set to logging.INFO for less, to logging
 
 def create_reduced_mip_model(
     norm: Norm,
-    A_row_l: np.ndarray, A_row_r, col_index_map: List[int],
-    A_col_l: np.ndarray, A_col_r, row_index_map: List[int],
-    permutation
+    A_l: np.ndarray,
+    A_r: np.ndarray,
+    col_index_map: List[int],
+    row_index_map: List[int],
 ):
     """
     Create a reduced MIP model that only contains variables that still need to be fixed
     :param norm: The norm that shoiuld be used for the optimization
-    :param A_row: Adjacency matrix containing only rows corresponding to nodes with no target
-    :param col_index: List s.t. the i-th entry is the index of the i-th row of A_row w.r.t. the original matrix
-    :param A_col: Adjacency matrix containing only columns corresponding to nodes which are no targets
-    :param row_index: List s.t. the i-th entry is the index of the i-th column of A_col w.r.t. the original matrix
+    :param A_l: Adjacency matrix with permutation multiplied from left
+    :param A_r: Adjacency matrix with permutation multiplied from right
+    :param col_index: List s.t. the i-th entry will be the index of the i-th row of A_row w.r.t. the original matrix
+    :param row_index: List s.t. the i-th entry will be the index of the i-th column of A_col w.r.t. the original matrix
     :param permutation: The incomplete permutation
     :return: The model
     """
     assert isinstance(norm, Norm)
-    #assert A_row.ndim == 2
+    assert A_l.ndim == 2
+
+    A_row_l = A_l[row_index_map, :]
+    A_row_r = A_r[row_index_map, :]
+    A_col_l = A_l[:, col_index_map]
+    A_col_r = A_r[:, col_index_map]
 
     n_unknowns = A_row_l.shape[0]
     n_nodes = A_row_l.shape[1]
