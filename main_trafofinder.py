@@ -92,8 +92,9 @@ for trafo in trafos:
             permutation_group_generators.append(p)
 
 if not quiet:
-    print('Found generating set:')
-    for gen in g.generators:
+    print(f'Found generating set with {len(permutation_group_generators)} members:')
+    for i, gen in enumerate(permutation_group_generators):
+        print(f'\nG_{i} =')
         print(matshow(to_matrix(gen.array_form)))
 
     plt.hist(deviation_values, bins=len(deviation_values))
