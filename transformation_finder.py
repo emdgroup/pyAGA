@@ -195,16 +195,13 @@ def calculate_trafos(
                     tmp_filled_permutation[row_index_map[i]] = col_index_map[i]
                     
                 tmp_p_matrix = to_matrix(tmp_filled_permutation)
-                
-                A_row_l = (tmp_p_matrix@adjacency_matrix)[row_index_map, :]
-                A_row_r = (adjacency_matrix@tmp_p_matrix)[row_index_map, :]
-                A_col_l = (tmp_p_matrix@adjacency_matrix)[:, col_index_map]
-                A_col_r = (adjacency_matrix@tmp_p_matrix)[:, col_index_map]
+                A_l = tmp_p_matrix@adjacency_matrix
+                A_r = adjacency_matrix@tmp_p_matrix
 
                 # Solve the reduced problem
                 # Currently WIP, not fully integrated yet
                 solver = Solver.SCIP
-                model = create_reduced_mip_model(norm, A_row_l, A_row_r, col_index_map, A_col_l, A_col_r, row_index_map, permutation)
+                model = create_reduced_mip_model(norm, A_l, A_r, col_index_map, row_index_map)
                 ip_solver, solve_params = create_mip_solver(solver, norm)
 
                 try:
