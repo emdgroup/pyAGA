@@ -39,7 +39,7 @@ with open(mat_filename, "rb") as correlation_matrix_file:
             trafo_fault_tolerance_ratio
             * num_variables),
         round_decimals=trafo_round_decimals,
-        quiet=False,
+        quiet=quiet,
         bandwidth=kde_bandwidth,
         casename=world_name,
         norm=norm,
