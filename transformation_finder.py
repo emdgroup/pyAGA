@@ -1,4 +1,4 @@
-from typing import List, Union, Set
+from typing import List, Union, Set, Callable
 
 import numpy as np
 import sys
@@ -29,7 +29,8 @@ def find_trafos(
     bandwidth: float,
     casename: str,
     norm: Norm,
-    use_integer_programming,
+    use_integer_programming: bool,
+    stop_thread: Callable[[None], bool] = None,
 ) -> List[List[Union[int, None]]]:
     """
     Find all transformations (i.e. graph symmetries) on a given graph.
@@ -43,6 +44,8 @@ def find_trafos(
     :param casename: The name of the testcase.
     :param use_integer_programming: Whether or not to use the integer programming
     routines to fill out partial transformations.
+    :param stop_thread: This function passes along a lambda callback to tell this
+    thread to terminate.
     :return: A tuple containing the found transformations as its first entry,
     and the average matchrate over the found transformations as its second.
     Matchrates are the ratios of correctly mapped nodes to unmappable ones.
@@ -75,8 +78,12 @@ def find_trafos(
         norm,
         use_integer_programming,
         trafos,
+        stop_thread,
     )
-    return trafos, sum(matching_rates) / len(matching_rates)
+    if stop_thread is not None and stop_thread():
+        return [None, None]
+    else:
+        return trafos, sum(matching_rates) / len(matching_rates)
 
 
 def calculate_trafos(
@@ -90,6 +97,7 @@ def calculate_trafos(
     norm: Norm,
     use_integer_programming: bool,
     result: List[List[Union[int, None]]],
+    stop_thread,
 ) -> None:
     """Calculate the transformations with the given possible mappings. This function
     is called recursively, until all sets in the possible mappings have at most one
@@ -108,8 +116,14 @@ def calculate_trafos(
     :param use_integer_programming: Whether or not to use the integer programming
     routines to fill out partial transformations.
     :param result: The list containing all currently found transformations.
+    :param stop_thread: This function passes along a lambda callback to tell this
+    thread to terminate.
     :return: None
     """
+    if stop_thread is not None and stop_thread():
+        # If the stop_thread lambda callback is activated, exit early.
+        return
+
     number_of_matches = {
         'impossible':  sum(1 for i in possible_mappings if len(i) == 0),
         'perfect': sum(1 for i in possible_mappings if len(i) == 1),
@@ -143,6 +157,7 @@ def calculate_trafos(
                 norm,
                 use_integer_programming,
                 result,
+                stop_thread,
             )
     else:
         # Check if possible_mappings contains identical single_element entries
@@ -253,8 +268,8 @@ def filter_perms(
     fall into the same bin.
     :param possible_mappings: A list containing all possible mappings of the node at
     each position.
-    :param x: The original node of the assumed map.
-    :param y: The image node of the assumed map.
+    :param start_node: The original node of the assumed map.
+    :param target_node: The image node of the assumed map.
     :return: The possible mappings under the given assumed map.
     """
     # Iterate over all possible weights w
