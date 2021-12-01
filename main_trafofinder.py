@@ -1,17 +1,30 @@
-import numpy as np
-from sympy.combinatorics import Permutation
-from sympy.combinatorics.perm_groups import PermutationGroup
-from matplotlib import pyplot as plt
+import os
+import sys
+from datetime import datetime
 
-from transformation_finder import find_trafos
-from mipsym.mip import Norm
-from mipsym.tools import to_matrix, matshow, deviation_value
+sys.path.append(r"C:\Users\M305822\OneDrive - MerckGroup\PycharmProjects\integer_programming_for_transformations")
+sys.path.append(r"C:\Users\M290244@eu.merckgroup.com\OneDrive - MerckGroup\Programming\integer_programming_for_transformations")
+
+import logging
 import pickle
 from itertools import count
+import gzip
+import shutil
 
-#world_name = "two_letter_words_20x10"
+import numpy as np
+from matplotlib import pyplot as plt
+from mipsym.mip import Norm
+from mipsym.tools import to_matrix, matshow, deviation_value
+from sympy.combinatorics import Permutation
+from sympy.combinatorics.perm_groups import PermutationGroup
+
+from transformation_finder import find_trafos
+
+
+# world_name = "two_letter_words_20x10"
 world_name = "one_letter_words_10x5"
 percentage = "98.0"
+# percentage = "95.0"
 integer_matrices = False
 trafo_round_decimals = 4
 trafo_fault_tolerance_ratio = 0.25
@@ -20,6 +33,25 @@ use_integer_programming = True
 quiet = False
 norm = Norm.L_INFINITY
 error_value_limit = 0.006
+log_to_file = True
+
+
+log_filename = f'logs/{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.log'
+if log_to_file:
+    handlers = [logging.FileHandler(log_filename), logging.StreamHandler(sys.stdout)]
+else:
+    handlers = [logging.StreamHandler(sys.stdout)]
+
+os.makedirs("logs", exist_ok=True)
+logging.basicConfig(
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    handlers=[
+        logging.FileHandler(log_filename),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger("trafofinder_presolving")
+logger.setLevel(logging.DEBUG)
 
 
 if integer_matrices:
@@ -29,7 +61,7 @@ else:
 
 
 with open(mat_filename, "rb") as correlation_matrix_file:
-    print(f"Loading matrix {mat_filename}")
+    logging.info(f"Loading matrix {mat_filename}")
     correlation_matrix = np.transpose(pickle.load(correlation_matrix_file))
     # trafos = find_trafos(correlation_matrix, trafo_accuracy)
     num_variables = correlation_matrix.shape[0]
@@ -47,11 +79,11 @@ with open(mat_filename, "rb") as correlation_matrix_file:
     )
 
 if not quiet:
-    print(f"Total number of found trafos {len(trafos)}")
+    logger.info(f"Total number of found trafos {len(trafos)}")
     for i, trafo in enumerate(trafos):
         matrix = to_matrix(trafo)
-        print(f'Printing permutation number {i+1}')
-        print(matshow(matrix))
+        logger.info(f'Printing permutation number {i+1}')
+        logger.debug(matshow(matrix))
 
 # We try to find a small/minimal generating set for all valid-ish transformations as follows:
 # For all found transformations p_i, we compute all powers p_i^k and see if |p_i^k A - A p_i^k|
@@ -59,7 +91,7 @@ if not quiet:
 # group with all transformations found so far and see if p is already in there.
 # If so, we skip p, otherwise we add it to the permutation group.
 if not quiet:
-    print('Trying to compute a small/minimal generating set for the found transformations...')
+    logging.info('Trying to compute a small/minimal generating set for the found transformations...')
 
 id = np.eye(len(correlation_matrix))
 permutation_group_generators = []
@@ -78,8 +110,11 @@ for trafo in trafos:
         deviation = deviation_value(norm, current_power, correlation_matrix)
         deviation_values.append(deviation)
         if deviation > error_value_limit:
-            print(f'Skipping a transformation due to deviation {deviation} > {error_value_limit}'
-                  f' for power {power}:\n{matshow(generator)}')
+            logging.info(
+                f'Skipping a transformation due to deviation'
+                f' {deviation} > {error_value_limit}' 
+                f' for power {power}:\n{matshow(generator)}'
+            )
             is_valid = False
             break
 
@@ -92,12 +127,22 @@ for trafo in trafos:
             permutation_group_generators.append(p)
 
 if not quiet:
-    print(f'Found generating set with {len(permutation_group_generators)} members:')
+    logging.info(f'Found generating set with {len(permutation_group_generators)} '
+               f'members:')
     for i, gen in enumerate(permutation_group_generators):
-        print(f'\nG_{i} =')
-        print(matshow(to_matrix(gen.array_form)))
+        logging.info(f'\nG_{i} =')
+        logging.debug(matshow(to_matrix(gen.array_form)))
 
     plt.hist(deviation_values, bins=len(deviation_values))
     plt.title('Histogram of |p_i^k A - A p_i^k| for all identified permutations')
     plt.axvline(x=error_value_limit, color='red')
     plt.show()
+
+
+# Compress log file, and remove uncompressed original afterwards.
+with open(log_filename, 'rb') as f_in:
+    with open(f'{log_filename}.gz', 'wb') as f_out:
+        with gzip.GzipFile('file.txt', 'wb', fileobj=f_out) as gzfile:
+            shutil.copyfileobj(f_in, gzfile)
+logging.shutdown()
+os.remove(log_filename)

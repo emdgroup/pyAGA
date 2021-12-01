@@ -1,4 +1,6 @@
+import logging
 import math
+import sys
 import threading
 import time
 
@@ -9,16 +11,27 @@ from transformation_finder import find_trafos
 from mipsym.mip import Norm
 import pickle
 
-# world_name = "two_letter_words_20x10"
-world_name = "one_letter_words_10x5"
+logger = logging.getLogger("trafofinder_presolving")
+
+world_name = "two_letter_words_20x10"
+# world_name = "one_letter_words_10x5"
 integer_matrices = False
 trafo_round_decimals = 4
 use_integer_programming = False
 quiet = True
 norm = Norm.L_INFINITY
 error_value_limit = 0.006
-time_per_iteration = 60      # Maximum time a given iteration can process until it is
-                             # terminated
+time_per_iteration = 1000      # Maximum time a given iteration can process until it is
+                               # terminated
+
+handlers = [logging.StreamHandler(sys.stdout)]
+logging.basicConfig(
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    handlers=[logging.StreamHandler(sys.stdout)],
+)
+logger = logging.getLogger("trafofinder_presolving")
+logger.setLevel(logging.DEBUG)
+
 
 ## Parameters of parameter study
 percentages = ["100", "99.9", "98.0", "95.0"]
@@ -67,7 +80,7 @@ for percentage in percentages:
     else:
         mat_filename = f"data/{world_name}_concurrence_matrix_{percentage}.pickle"
     with open(mat_filename, "rb") as correlation_matrix_file:
-        print(f"Loading matrix {mat_filename}")
+        logger.info(f"Loading matrix {mat_filename}")
         correlation_matrix = np.transpose(pickle.load(correlation_matrix_file))
         num_variables = correlation_matrix.shape[0]
 
@@ -103,7 +116,7 @@ for percentage in percentages:
                 thread.join(timeout=1)
 
                 if thread.is_alive():
-                    print(f"Calculation of trafos timed out.")
+                    logger.warning(f"Calculation of trafos timed out.")
                     parameters = (
                         percentage,
                         kde_bandwidth,
@@ -125,7 +138,7 @@ for percentage in percentages:
                         average_matchrate_per_trafo,
                         round(time.time() - time_start, 2),
                     )
-                    print(
+                    logger.info(
                         f"percentage_observations = {percentage}  ,",
                         f"kde_bandwidth = {round(kde_bandwidth, 12)},  "
                         f"trafo_fault_tolerance_ratio = {trafo_fault_tolerance_ratio},  ",

@@ -1,3 +1,4 @@
+import logging
 from typing import List
 
 import numpy as np
@@ -6,6 +7,7 @@ import pickle
 import matplotlib.pyplot as plt
 import scipy.signal as spsig
 
+logger = logging.getLogger("trafofinder_presolving")
 
 def coalesce_values(matrix):
     """
@@ -24,7 +26,7 @@ def coalesce_values(matrix):
             pass
 
 
-def bins(matrix, bandwidth, plot=False) -> List[float]:
+def bins(matrix: np.ndarray, bandwidth: float, plot=False) -> List[float]:
     """
     Calculate the transformation-finder bins using kernel density estimation. For
     further details, see https://scikit-learn.org/stable/modules/generated/sklearn
@@ -56,7 +58,7 @@ def bins(matrix, bandwidth, plot=False) -> List[float]:
 
     bins = [1e-10] + bins_with_maxima.tolist()
     # bins = plot_x[minima_indices]
-    print(f"bins = {bins}")
+    logger.debug(f"bins = {bins}")
 
     if plot:
         fig, ax = plt.subplots(nrows=2, sharex=True)

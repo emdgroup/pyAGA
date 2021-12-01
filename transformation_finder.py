@@ -1,3 +1,4 @@
+import logging
 from typing import List, Union, Set, Callable
 
 import numpy as np
@@ -13,12 +14,13 @@ from mipsym.mip_reduced import create_reduced_mip_model
 from mipsym.mip import create_mip_solver
 from mipsym.tools import to_ndarray, to_list, to_matrix, matshow, deviation_value
 
+logger = logging.getLogger("trafofinder_presolving")
 
 def print_permutation(text: str, norm: Norm, a: np.ndarray, perm: List[int]):
     p = vt.to_matrix(perm)
-    print(text)
-    print(f'Error Norm  = {deviation_value(norm, p, a)}')
-    print(f'Permutation = {perm}')
+    logger.info(text)
+    logger.info(f'Error Norm  = {deviation_value(norm, p, a)}')
+    logger.info(f'Permutation = {perm}')
 
 
 def find_trafos(
@@ -143,8 +145,8 @@ def calculate_trafos(
         for potential_target in possible_mappings[node_of_shortest]:
             new_poss = filter_perms(equivalency_classes, list(possible_mappings), node_of_shortest, potential_target)
             if new_poss == possible_mappings:
-                print("This should not happen. Please assure that all self-concurrences "
-                      "have fallen into the same bin.")
+                logger.error("This should not happen. Please assure that all "
+                             "self-concurrences have fallen into the same bin.")
                 assert False
             calculate_trafos(
                 adjacency_matrix,
@@ -177,7 +179,7 @@ def calculate_trafos(
                     adjacency_matrix,
                     permutation
                 )
-                print(matshow(to_matrix(permutation)))
+                logger.debug("\n" + matshow(to_matrix(permutation)))
         else:
             # for at least one node there is no target node left
 
@@ -190,11 +192,12 @@ def calculate_trafos(
             matching_rate = number_of_matches['perfect'] / len(possible_mappings)
 
             if not quiet:
-                print(f'Incomplete permutation number {len(result)} matched {number_of_matches["perfect"]} nodes.')
-                print(permutation)
+                logger.info(f'Incomplete permutation number {len(result)} matched '
+                            f'{number_of_matches["perfect"]} nodes.')
+                logger.info(permutation)
 
             if use_integer_programming:
-                print('Trying to fill missing entries in permutation using MIP')
+                logger.info('Trying to fill missing entries in permutation using MIP')
 
                 # Construct a reduced MIP only containing rows/cols that are still not resolved
                 # Mappings for identifying the rows/cols of the reduced problem and corresponding matrices
@@ -220,7 +223,7 @@ def calculate_trafos(
                 ip_solver, solve_params = create_mip_solver(solver, norm)
 
                 try:
-                    print(f'Solving using {solver}')
+                    logger.info(f'Solving using {solver}')
                     results = ip_solver.solve(
                         model,
                         tee=not quiet,
@@ -237,21 +240,21 @@ def calculate_trafos(
                         filled_permutation[row_index_map[i]] = col_index_map[p]
 
                     if not quiet:
-                        print('Solver Result:\n' + str(results))
+                        logger.info('Solver Result:\n' + str(results))
                         print_permutation('Filled Permutation.', norm, adjacency_matrix, filled_permutation)
 
                     permutation = filled_permutation
                     matching_rate = 1
 
                 except RuntimeError:
-                    print(f'No solution found for {permutation}')
-                    print('Solver Result:\n' + str(results))
+                    logger.warning(f'No solution found for {permutation}')
+                    logger.warning('Solver Result:\n' + str(results))
 
             result.append(permutation)
             matching_rates.append(matching_rate)
 
             if not quiet:
-                print(matshow(to_matrix(permutation)))
+                logger.debug("\n" + matshow(to_matrix(permutation)))
 
 
 def filter_perms(
