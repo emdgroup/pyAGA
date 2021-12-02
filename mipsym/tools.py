@@ -61,10 +61,21 @@ def to_list(matrix):
 def matshow(v: np.ndarray):
     # Print ASCII-art of the matrix
     lines = ''
-    for row in v:
+    assert len(v) % 2 == 0  # the other case is not implemented, yet
+    for iRow in range(0, len(v), 2):
         lines += '|'
-        for col in row:
-            lines += ' ' if col == 0 else str(int(col))
+        rows = v[iRow:iRow+2]
+        for col in rows.T:
+            if col[0] == 0 and col[1] == 0:
+                lines += ' '
+            elif col[0] == 1 and col[1] == 0:
+                lines += '▀'
+            elif col[0] == 0 and col[1] == 1:
+                lines += '▄'
+            elif col[0] == 1 and col[1] == 1:
+                lines += '█'
+            else:
+                assert False
         lines += '|\n'
 
     return lines
