@@ -142,11 +142,11 @@ for trafo in trafos:
             permutation_group_generators.append(p)
 
 if not quiet:
-    logging.info(f'Found generating set with {len(permutation_group_generators)} '
+    logger.info(f'Found generating set with {len(permutation_group_generators)} '
                f'members:')
     for i, gen in enumerate(permutation_group_generators):
-        logging.info(f'\nG_{i} =')
-        logging.debug(matshow(to_matrix(gen.array_form)))
+        logger.info(f'\nG_{i} =')
+        logger.debug("\n" + matshow(to_matrix(gen.array_form)))
 
     plt.hist(deviation_values, bins=len(deviation_values))
     plt.title('Histogram of |p_i^k A - A p_i^k| for all identified permutations')
