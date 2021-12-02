@@ -7,8 +7,8 @@ import sys
 import kernel_density
 import verify_transformations as vt
 
-sys.path.append(r"C:\Users\M305822\OneDrive - MerckGroup\PycharmProjects\integer_programming_for_transformations")
-sys.path.append(r"C:\Users\M290244@eu.merckgroup.com\OneDrive - MerckGroup\Programming\integer_programming_for_transformations")
+import local_import_paths
+local_import_paths.import_paths()
 from mipsym.mip import Norm, Solver
 from mipsym.mip_reduced import create_reduced_mip_model
 from mipsym.mip import create_mip_solver

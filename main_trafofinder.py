@@ -2,8 +2,8 @@ import os
 import sys
 from datetime import datetime
 
-sys.path.append(r"C:\Users\M305822\OneDrive - MerckGroup\PycharmProjects\integer_programming_for_transformations")
-sys.path.append(r"C:\Users\M290244@eu.merckgroup.com\OneDrive - MerckGroup\Programming\integer_programming_for_transformations")
+import local_import_paths
+local_import_paths.import_paths()
 
 import logging
 import pickle
@@ -77,6 +77,21 @@ with open(mat_filename, "rb") as correlation_matrix_file:
         norm=norm,
         use_integer_programming=use_integer_programming
     )
+
+
+    # Experimental
+    # trafos, average_matchrate_per_trafo = find_trafos(
+    #    correlation_matrix,
+    #    fault_tolerance=int(
+    #        trafo_fault_tolerance_ratio
+    #        * num_variables),
+    #    round_decimals=trafo_round_decimals,
+    #    quiet=quiet,
+    #    bandwidth=kde_bandwidth,
+    #    casename=world_name, norm=norm,
+    #    use_integer_programming=use_integer_programming,
+    #    false_map_resistance_per_node=3
+    # )
 
 if not quiet:
     logger.info(f"Total number of found trafos {len(trafos)}")

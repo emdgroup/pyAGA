@@ -7,8 +7,11 @@ import time
 import numpy as np
 import pandas as pd
 
+import local_import_paths
+local_import_paths.import_paths()
 from transformation_finder import find_trafos
 from mipsym.mip import Norm
+from mipsym.tools import to_matrix, matshow, deviation_value
 import pickle
 
 logger = logging.getLogger("trafofinder_presolving")
