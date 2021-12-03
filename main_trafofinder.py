@@ -38,17 +38,17 @@ log_to_file = True
 
 log_filename = f'logs/{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.log'
 if log_to_file:
-    handlers = [logging.FileHandler(log_filename), logging.StreamHandler(sys.stdout)]
+    os.makedirs("logs", exist_ok=True)
+    handlers = [
+        logging.FileHandler(log_filename, "w", "utf-8"),
+        logging.StreamHandler(sys.stdout)
+    ]
 else:
     handlers = [logging.StreamHandler(sys.stdout)]
 
-os.makedirs("logs", exist_ok=True)
 logging.basicConfig(
     format='%(asctime)s [%(levelname)s] %(message)s',
-    handlers=[
-        logging.FileHandler(log_filename),
-        logging.StreamHandler()
-    ]
+    handlers=handlers,
 )
 logger = logging.getLogger("trafofinder_presolving")
 logger.setLevel(logging.DEBUG)
@@ -153,11 +153,11 @@ if not quiet:
     plt.axvline(x=error_value_limit, color='red')
     plt.show()
 
-
-# Compress log file, and remove uncompressed original afterwards.
-with open(log_filename, 'rb') as f_in:
-    with open(f'{log_filename}.gz', 'wb') as f_out:
-        with gzip.GzipFile('file.txt', 'wb', fileobj=f_out) as gzfile:
-            shutil.copyfileobj(f_in, gzfile)
-logging.shutdown()
-os.remove(log_filename)
+if log_to_file:
+    # Compress log file, and remove uncompressed original afterwards.
+    with open(log_filename, 'rb') as f_in:
+        with open(f'{log_filename}.gz', 'wb') as f_out:
+            with gzip.GzipFile('file.txt', 'wb', fileobj=f_out) as gzfile:
+                shutil.copyfileobj(f_in, gzfile)
+    logging.shutdown()
+    os.remove(log_filename)
