@@ -387,7 +387,10 @@ if __name__ == "__main__":
     filename_xlsx = f"{study_name}_results_{uuid.uuid4()}.xlsx"
     logger.info(f"Results table will be written to {filename_xlsx}")
     # config.read(f"parameter_study/parameter_study_{study_name}.ini")
-    config.read(f"parameter_study/parameter_study_{study_name}.ini")
+    config_name = f"parameter_study/parameter_study_{study_name}.ini"
+    with open(config_name, 'r') as file:
+        print(file.read())
+    config.read(config_name)
     params = config._sections
 
     global_timeout = float(params["global_timeout"]["global_timeout"])
