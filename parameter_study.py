@@ -6,6 +6,7 @@ import platform
 import sys
 import threading
 import time
+import uuid
 from itertools import count
 from typing import List, Callable, Tuple
 
@@ -102,7 +103,8 @@ def find_trafos_wrapper(
     :param correlation_matrix: The adjacency matrix of the graph whose symmetries we
     want to find.
     :param fault_tolerance: The number of tolerated unmappable nodes.
-    :param trafo_round_decimals: The number of positions which will be left after rounding
+    :param trafo_round_decimals: The number of positions which will be left after
+    rounding.
     the adjacency matrix values.
     :param quiet: A parameter to limit the number of console and log-outputs.
     :param kde_bandwidth: The bandwidth parameter for the kernel density estimation and
@@ -223,6 +225,8 @@ def try_bandwidths_and_tolerance_ratios(
                         "Timeout",
                         "Timeout",
                         "Timeout",
+                        "Timeout",
+                        "Timeout",
                         round(time.time() - time_start, 2),
                     )
 
@@ -231,9 +235,10 @@ def try_bandwidths_and_tolerance_ratios(
                         time.sleep(0.5)
                 else:
                     trafos, average_matchrate_per_trafo = results
-                    num_generators = num_generators_contained(
-                        trafos, norm, adjacency_matrix, error_value_limit
-                    )
+                    num_generators, all_fundamentals_contained, group_order = \
+                        num_generators_contained(
+                            trafos, norm, adjacency_matrix, error_value_limit
+                        )
                     parameters = (
                         current_percentage,
                         kde_bandwidth,
@@ -241,15 +246,21 @@ def try_bandwidths_and_tolerance_ratios(
                         len(trafos),
                         average_matchrate_per_trafo,
                         num_generators,
+                        all_fundamentals_contained,
+                        group_order,
                         round(time.time() - time_start, 2),
                     )
+                    assert len(parameters) == num_columns
                     logger.info(
                         f"percentage_observations = {current_percentage},  "
                         f"kde_bandwidth = {round(kde_bandwidth, 12)},  "
                         f"trafo_fault_tolerance_ratio = {trafo_fault_tolerance_ratio},  "
                         f"num_found_trafos = {len(trafos)},  "
-                        f"average_matchrate_per_trafo = {average_matchrate_per_trafo},  "
+                        f"average_matchrate_per_trafo = "
+                        f"{average_matchrate_per_trafo},  "
                         f"num_generators = {num_generators},  "
+                        f"all_fundamentals_contained = {all_fundamentals_contained},  "
+                        f"group_order = {group_order},  "
                     )
             else:
                 # As a previous, smaller bandwidth already timed out, we can safely skip
@@ -262,7 +273,10 @@ def try_bandwidths_and_tolerance_ratios(
                     "skipped",
                     "skipped",
                     "skipped",
+                    "skipped",
+                    "skipped",
                 )
+                assert len(parameters) == num_columns
                 logger.info(
                     f"percentage_observations = {current_percentage},  "
                     f"kde_bandwidth = {round(kde_bandwidth, 12)},  "
@@ -292,8 +306,8 @@ def num_generators_contained(trafos, norm, adjacency_matrix, error_value_limit):
     # error_value_limit
     deviation_values = []
     for trafo in trafos:
-        generator = to_matrix(trafo)
-        current_power = generator
+        fundamental_generator = to_matrix(trafo)
+        current_power = fundamental_generator
         is_valid = True
         for power in count(0):
             if np.allclose(current_power, id):
@@ -305,12 +319,12 @@ def num_generators_contained(trafos, norm, adjacency_matrix, error_value_limit):
                 logging.info(
                     f"Skipping a transformation due to deviation"
                     f" {deviation} > {error_value_limit}"
-                    f" for power {power}:\n{matshow(generator)}"
+                    f" for power {power}:\n{matshow(fundamental_generator)}"
                 )
                 is_valid = False
                 break
 
-            current_power = current_power @ generator
+            current_power = current_power @ fundamental_generator
 
         if is_valid:
             g = PermutationGroup(*permutation_group_generators)
@@ -321,17 +335,58 @@ def num_generators_contained(trafos, norm, adjacency_matrix, error_value_limit):
     for gen in permutation_group_generators:
         if not gen.is_Identity:
             tmp.append(gen)
-    return len(tmp)
+
+    # Verify that all fundamental generators are present in the permutation group
+    fundamental_generators = []
+    num_horizontal_pixels, num_vertical_pixels = map(
+        lambda x: int(x),
+        study_name.split("x")
+    )
+    # Create horizontal shift by one pixel
+    horizontal_shift = []
+    column = np.arange(0, num_vertical_pixels)
+    for i in range(1, num_horizontal_pixels):
+        horizontal_shift.extend((column + i * num_vertical_pixels).tolist())
+    horizontal_shift.extend(column.tolist())
+    fundamental_generators.append(Permutation(horizontal_shift))
+
+    # Create vertical shift by one pixel
+    vertical_shift = []
+    column = np.array(list((range(1, num_vertical_pixels))) + [0])
+    for i in range(0, num_horizontal_pixels):
+        vertical_shift.extend((column + i * num_vertical_pixels).tolist())
+    fundamental_generators.append(Permutation(vertical_shift))
+    # Create flip
+    flip = list(range(num_horizontal_pixels * num_vertical_pixels - 1, -1, -1))
+    fundamental_generators.append(Permutation(flip))
+
+    all_fundamental_generators_present = True
+    permutation_group = PermutationGroup(permutation_group_generators)
+    for fundamental_generator in fundamental_generators:
+        if fundamental_generator not in permutation_group:
+            all_fundamental_generators_present = False
+            break
+    group_order = permutation_group.order()
+
+    return len(tmp), all_fundamental_generators_present, group_order
 
 
 if __name__ == "__main__":
+    num_columns = 9
     logging.basicConfig(
         format="%(asctime)s [%(levelname)s] %(message)s",
         handlers=[logging.StreamHandler(sys.stdout)],
     )
     logger.setLevel(logging.DEBUG)
     config = configparser.ConfigParser()
-    study_name = "10x5"
+    try:
+        study_name = sys.argv[1]
+    except IndexError:
+        logger.error("Please provide name of testcase")
+        sys.exit(1)
+    filename_xlsx = f"{study_name}_results_{uuid.uuid4()}.xlsx"
+    logger.info(f"Results table will be written to {filename_xlsx}")
+    # config.read(f"parameter_study/parameter_study_{study_name}.ini")
     config.read(f"parameter_study/parameter_study_{study_name}.ini")
     params = config._sections
 
@@ -393,18 +448,21 @@ if __name__ == "__main__":
             global_stop_thread = True  # Stop thread via lambda callback (globally).
             while thread.is_alive():
                 time.sleep(0.5)
+    columns = [
+        "percentage_observation",
+        "kde_bandwidth",
+        "trafo_fault_tolerance_ratio",
+        "num_found_trafos",
+        "average_matchrate_per_trafo",
+        "num_generators",
+        "fundamental_generators_contained",
+        "permutation_group_order",
+        "time for calculation",
+    ]
+    assert len(columns) == num_columns
     results_dataframe = pd.DataFrame(
         parameter_study_results,
-        columns=[
-            "percentage_observation",
-            "kde_bandwidth",
-            "trafo_fault_tolerance_ratio",
-            "num_found_trafos",
-            "average_matchrate_per_trafo",
-            "num_generators",
-            "time for calculation",
-        ],
+        columns=columns,
     )
-    results_dataframe.to_excel(f"{study_name}_results.xlsx", engine="xlsxwriter")
-
+    results_dataframe.to_excel(filename_xlsx, engine="xlsxwriter")
 
