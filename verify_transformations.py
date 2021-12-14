@@ -31,16 +31,18 @@ def verify_one_transformation(
 ) -> bool:
     """
     Verify whether a single transformation candidate corresponds to a valid
-    transformation (calculated from the full data set). If the transformation candidate
-    is partial, meaning that it contains None-entries, then it is considered valid if it
-    corresponds to a valid transformation in all entries which are not None.
-    :param t_candidate: The transformation to verify.
-
+    transformation from a given set of full transformations. If the transformation
+    candidate is partial, meaning that it contains None-entries, then it is considered
+    valid if it corresponds to a valid transformation in all entries which are not None.
     The function can be called by passing test_transformations or by using the casename
-    parameter, in which case it will load the set of
-    :param test_transformations: The given
-    :param casename:
-    :return:
+    parameter, in which case it will load the set of transformations from the disk.
+    :param t_candidate: The transformation to verify.
+    :param test_transformations: The given set of valid transformations.
+    :param casename: The name of the testcase. The function will look for the pickled
+    transformations in the file "data/test_transformations_{casename}.pickle".
+
+    :return: Whether or not the given transformation candidate corresponds to any
+    transformation in test
     """
     if casename is not None:
         with open(f"data/test_transformations_{casename}.pickle", "rb") as file:
