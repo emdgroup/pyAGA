@@ -49,5 +49,8 @@ Thumbs.db
 *.mov
 *.wmv
 
+# Parameter study results
+*xlsx
+
 .vscode
 mipsym
