@@ -289,7 +289,7 @@ def try_bandwidths_and_tolerance_ratios(
 
 
 def num_generators_contained(
-    trafos: List[List[int, ...]],
+    trafos: List[List[int]],
     norm: Norm,
     adjacency_matrix: np.ndarray,
     error_value_limit: float,
