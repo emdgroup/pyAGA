@@ -4,6 +4,8 @@ from typing import List, Union, Set, Callable
 import numpy as np
 import sys
 
+from sympy.combinatorics import PermutationGroup, Permutation
+
 import kernel_density
 import verify_transformations as vt
 
@@ -69,19 +71,11 @@ def find_trafos(
     # this is where the algorithm starts
     matching_rates = []
     trafos = []
-    calculate_trafos(
-        adjacency_matrix,
-        equivalency_classes,
-        possible_mappings,
-        quiet,
-        fault_tolerance,
-        matching_rates,
-        casename,
-        norm,
-        use_integer_programming,
-        trafos,
-        stop_thread,
-    )
+    # Quick and dirty way to implement mutable python ints. Yeah, I know.
+    number_of_MIP_calls = [0]
+    calculate_trafos(adjacency_matrix, equivalency_classes, possible_mappings, quiet,
+                     fault_tolerance, matching_rates, casename, norm,
+                     use_integer_programming, number_of_MIP_calls, trafos, stop_thread)
     if stop_thread is not None and stop_thread():
         return [None, None]
     else:
@@ -98,6 +92,7 @@ def calculate_trafos(
     casename: str,
     norm: Norm,
     use_integer_programming: bool,
+    number_of_MIP_calls: List[int],
     result: List[List[Union[int, None]]],
     stop_thread,
 ) -> None:
@@ -117,6 +112,8 @@ def calculate_trafos(
     :param casename: The name of the testcase.
     :param use_integer_programming: Whether or not to use the integer programming
     routines to fill out partial transformations.
+    :param number_of_MIP_calls: A hacked mutable int (a list containing only one
+    number) to track how many times the MIP has been called.
     :param result: The list containing all currently found transformations.
     :param stop_thread: This function passes along a lambda callback to tell this
     thread to terminate.
@@ -158,6 +155,7 @@ def calculate_trafos(
                 casename,
                 norm,
                 use_integer_programming,
+                number_of_MIP_calls,
                 result,
                 stop_thread,
             )
@@ -170,16 +168,26 @@ def calculate_trafos(
         if number_of_matches['impossible'] == 0:
             # for every node, we exactly have one target node left - this is a complete permutation
             permutation = [s.pop() for s in possible_mappings]
-            result.append(permutation)
-            matching_rates.append(1)
-            if not quiet:
-                print_permutation(
-                    f'Permutation number {len(result)} matched all nodes.',
-                    norm,
-                    adjacency_matrix,
-                    permutation
+
+            if permutation not in result:
+                # Calculate all powers of every permutation for which we have been able
+                # to find all entries during pre-solving.
+                all_group_elements = map(
+                    lambda perm: list(perm),
+                    PermutationGroup(Permutation(permutation)).elements
                 )
-                logger.debug("\n" + matshow(to_matrix(permutation)))
+                for perm in all_group_elements:
+                    if perm not in result:
+                        result.append(perm)
+                matching_rates.append(1)
+                if not quiet:
+                    print_permutation(
+                        f'Permutation number {len(result)} matched all nodes.',
+                        norm,
+                        adjacency_matrix,
+                        permutation
+                    )
+                    logger.debug("\n" + matshow(to_matrix(permutation)))
         else:
             # for at least one node there is no target node left
 
@@ -196,7 +204,16 @@ def calculate_trafos(
                             f'{number_of_matches["perfect"]} nodes.')
                 logger.info(permutation)
 
+            if vt.verify_one_transformation(permutation, result):
+                logger.debug(
+                    'The partial transformation generated in the presolving step is'
+                    ' consistent with at least one transformation already found.'
+                )
+                return
+
             if use_integer_programming:
+                number_of_MIP_calls[0] += 1
+                logger.info(f'MIP call #{number_of_MIP_calls[0]}')
                 logger.info('Trying to fill missing entries in permutation using MIP')
 
                 # Construct a reduced MIP only containing rows/cols that are still not resolved
@@ -224,12 +241,13 @@ def calculate_trafos(
 
                 try:
                     logger.info(f'Solving using {solver}')
-                    results = ip_solver.solve(
+                    ip_results = ip_solver.solve(
                         model,
                         tee=not quiet,
                         timelimit=None,
                         report_timing=True,
-                        **solve_params)
+                        **solve_params
+                    )
 
                     reduced_p = to_ndarray(model.P, len(col_index_map), len(row_index_map))
                     reduced_permutation = to_list(reduced_p)
@@ -240,17 +258,32 @@ def calculate_trafos(
                         filled_permutation[row_index_map[i]] = col_index_map[p]
 
                     if not quiet:
-                        logger.info('Solver Result:\n' + str(results))
+                        logger.info('Solver Result:\n' + str(ip_results))
                         print_permutation('Filled Permutation.', norm, adjacency_matrix, filled_permutation)
 
                     permutation = filled_permutation
+
+                    new_permutation = Permutation(permutation)
+                    permutations_already_found = [Permutation(perm) for perm in result]
+                    permutations = [new_permutation] + permutations_already_found
+                    # Calculate all powers of every permutation which we could complete
+                    # using MIP.
+                    all_group_elements = map(
+                        lambda perm: list(perm),
+                        PermutationGroup(permutations).elements
+                    )
+                    for perm in all_group_elements:
+                        if perm not in result:
+                            result.append(perm)
                     matching_rate = 1
 
                 except RuntimeError:
                     logger.warning(f'No solution found for {permutation}')
-                    logger.warning('Solver Result:\n' + str(results))
+                    logger.warning('Solver Result:\n' + str(ip_results))
 
-            result.append(permutation)
+            else:
+                result.append(permutation)
+
             matching_rates.append(matching_rate)
 
             if not quiet:

@@ -25,11 +25,10 @@ import pickle
 logger = logging.getLogger("trafofinder_presolving")
 
 
-
 def run_parameter_study(
-        parameters,
-        global_timeout: Callable[[None], bool],
-        parameter_study_results: List
+    parameters: dict,
+    global_timeout: Callable[[None], bool],
+    parameter_study_results: List[Tuple],
 ) -> None:
     """The main function within this module, called from the if __name__ == "__main__"
     statement. After running through or after getting told to exit via global_timeout,
@@ -82,7 +81,6 @@ def run_parameter_study(
             )
             if global_timeout():
                 break
-
 
 
 def find_trafos_wrapper(
@@ -235,10 +233,13 @@ def try_bandwidths_and_tolerance_ratios(
                         time.sleep(0.5)
                 else:
                     trafos, average_matchrate_per_trafo = results
-                    num_generators, all_fundamentals_contained, group_order = \
-                        num_generators_contained(
-                            trafos, norm, adjacency_matrix, error_value_limit
-                        )
+                    (
+                        num_generators,
+                        all_fundamentals_contained,
+                        group_order,
+                    ) = num_generators_contained(
+                        trafos, norm, adjacency_matrix, error_value_limit
+                    )
                     parameters = (
                         current_percentage,
                         kde_bandwidth,
@@ -287,7 +288,12 @@ def try_bandwidths_and_tolerance_ratios(
             parameter_study_results.append(parameters)
 
 
-def num_generators_contained(trafos, norm, adjacency_matrix, error_value_limit):
+def num_generators_contained(
+    trafos: List[List[int, ...]],
+    norm: Norm,
+    adjacency_matrix: np.ndarray,
+    error_value_limit: float,
+) -> Tuple[int, bool, int]:
     """
     Calculate the permutation groups and return the number of the corresponding
     generators from the given transformations.
@@ -296,14 +302,21 @@ def num_generators_contained(trafos, norm, adjacency_matrix, error_value_limit):
     :param adjacency_matrix: The adjacency matrix of the graph
     :param error_value_limit: The limit for the deviation value of each group element in
     order for the first one to be considered a valid generator.
-    :return:
+    :return: A value which is bigger or equal to the number of permutation generators of
+    the permutation group defined by the variable "trafos", a boolean value indicating
+    whether the fundamental shifts are all present and the order of the group defined by
+    the permutations in "trafos".
     """
     id = np.eye(len(adjacency_matrix))
     permutation_group_generators = []
-    # during the filtering below, we will take note of the values of |p_i^k A - A
-    # p_i^k| to
-    # plot a histogram in the end, which allows for more convenient tuning of the
-    # error_value_limit
+    # During the filtering below, we will take note of the values of
+    # |p_i^k A - A p_i^k| to plot a histogram in the end, which allows for more
+    # convenient tuning of the error_value_limit.
+    # As it is currently implemented, this loop may yield unnecessarily many
+    # generators (as there may be permutations which are elements of subgroups of the
+    # horizontal or vertical shifts. For example, in a world which is 10 pixels wide,
+    # finding a horizontal shift by 2 pixels will not disallow also finding and
+    # adding the horizontal shift by 1 pixel to the list.
     deviation_values = []
     for trafo in trafos:
         fundamental_generator = to_matrix(trafo)
@@ -334,13 +347,14 @@ def num_generators_contained(trafos, norm, adjacency_matrix, error_value_limit):
     tmp = []
     for gen in permutation_group_generators:
         if not gen.is_Identity:
+            logger.debug(f"Adding generator:")
+            logger.debug(list(gen))
             tmp.append(gen)
 
     # Verify that all fundamental generators are present in the permutation group
     fundamental_generators = []
     num_horizontal_pixels, num_vertical_pixels = map(
-        lambda x: int(x),
-        study_name.split("x")
+        lambda x: int(x), study_name.split("x")
     )
     # Create horizontal shift by one pixel
     horizontal_shift = []
@@ -367,7 +381,6 @@ def num_generators_contained(trafos, norm, adjacency_matrix, error_value_limit):
             all_fundamental_generators_present = False
             break
     group_order = permutation_group.order()
-
     return len(tmp), all_fundamental_generators_present, group_order
 
 
@@ -388,7 +401,7 @@ if __name__ == "__main__":
     logger.info(f"Results table will be written to {filename_xlsx}")
     # config.read(f"parameter_study/parameter_study_{study_name}.ini")
     config_name = f"parameter_study/parameter_study_{study_name}.ini"
-    with open(config_name, 'r') as file:
+    with open(config_name, "r") as file:
         print(file.read())
     config.read(config_name)
     params = config._sections
@@ -424,11 +437,12 @@ if __name__ == "__main__":
         signal_queue = []  # One could use a queue.Queue here, but this is not necessary
         if not global_stop_thread:
             thread = threading.Thread(
-                target=run_parameter_study, args=(
+                target=run_parameter_study,
+                args=(
                     parameters_parsed,
                     lambda: global_stop_thread,
-                    parameter_study_results
-                )
+                    parameter_study_results,
+                ),
             )
 
         time_start = time.time()
@@ -463,9 +477,5 @@ if __name__ == "__main__":
         "time for calculation",
     ]
     assert len(columns) == num_columns
-    results_dataframe = pd.DataFrame(
-        parameter_study_results,
-        columns=columns,
-    )
+    results_dataframe = pd.DataFrame(parameter_study_results, columns=columns)
     results_dataframe.to_excel(filename_xlsx, engine="xlsxwriter")
-
