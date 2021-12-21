@@ -130,6 +130,9 @@ def calculate_trafos(
     }
     assert sum(number_of_matches.values()) == len(possible_mappings)
 
+    if number_of_matches['impossible'] > fault_tolerance:
+        return  # number of unmatched nodes exceeds fault tolerance
+
     if number_of_matches['unsure'] > 0:
         # search for the shortest remaining possible mapping...
         node_of_shortest = -1
@@ -172,9 +175,14 @@ def calculate_trafos(
             if permutation not in result:
                 # Calculate all powers of every permutation for which we have been able
                 # to find all entries during pre-solving.
+                new_permutation = Permutation(permutation)
+                permutations_already_found = [Permutation(perm) for perm in result]
+                permutations = [new_permutation] + permutations_already_found
+                # Calculate all powers of every permutation which we could complete
+                # using MIP.
                 all_group_elements = map(
                     lambda perm: list(perm),
-                    PermutationGroup(Permutation(permutation)).elements
+                    PermutationGroup(permutations).elements
                 )
                 for perm in all_group_elements:
                     if perm not in result:
@@ -188,11 +196,15 @@ def calculate_trafos(
                         permutation
                     )
                     logger.debug("\n" + matshow(to_matrix(permutation)))
+            else:
+                logger.info(
+                    'The transformation generated in the presolving step is'
+                    ' consistent with a transformation already found.'
+                )
         else:
             # for at least one node there is no target node left
 
-            if number_of_matches['impossible'] > fault_tolerance:
-                return  # number of unmatched nodes exceeds fault tolerance
+
 
             # nodes either have exactly one match target or cannot be matched at all
 
@@ -205,7 +217,7 @@ def calculate_trafos(
                 logger.info(permutation)
 
             if vt.verify_one_transformation(permutation, result):
-                logger.debug(
+                logger.info(
                     'The partial transformation generated in the presolving step is'
                     ' consistent with at least one transformation already found.'
                 )
