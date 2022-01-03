@@ -32,8 +32,8 @@ kde_bandwidth = 1e-3
 use_integer_programming = True
 quiet = False
 norm = Norm.L_INFINITY
-error_value_limit = 0.006
-log_to_file = True
+error_value_limit = 0.01
+log_to_file = False
 
 
 log_filename = f'logs/{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.log'
@@ -75,6 +75,7 @@ with open(mat_filename, "rb") as correlation_matrix_file:
         bandwidth=kde_bandwidth,
         casename=world_name,
         norm=norm,
+        error_value_limit=error_value_limit,
         use_integer_programming=use_integer_programming
     )
 

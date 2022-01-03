@@ -62,13 +62,11 @@ def run_parameter_study(
         with open(mat_filename, "rb") as correlation_matrix_file:
             logger.info(f"Loading matrix {mat_filename}")
             correlation_matrix = np.transpose(pickle.load(correlation_matrix_file))
-            num_variables = correlation_matrix.shape[0]
             try_bandwidths_and_tolerance_ratios(
                 percentage,
                 kde_bandwidths,
                 fault_tolerance_ratios,
                 correlation_matrix,
-                num_variables,
                 trafo_round_decimals,
                 quiet,
                 world_name,
@@ -91,6 +89,7 @@ def find_trafos_wrapper(
     kde_bandwidth: float,
     world_name: str,
     norm: Norm,
+    error_value_limit: float,
     use_integer_programming: bool,
     result: Tuple[List[List[int]], List[float]],
     stop_thread: Callable[[None], bool],
@@ -109,6 +108,7 @@ def find_trafos_wrapper(
     subsequent bin calculation.
     :param world_name: The name of the testcase.
     :param norm: The norm to use for the integer program.
+    :param error_value_limit:
     :param use_integer_programming: Whether or not to use the integer programming
     routines to fill out partial transformations.
     :param result: A tuple containing the found transformations as its first entry,
@@ -125,6 +125,7 @@ def find_trafos_wrapper(
         bandwidth=kde_bandwidth,
         casename=world_name,
         norm=norm,
+        error_value_limit=error_value_limit,
         use_integer_programming=use_integer_programming,
         stop_thread=stop_thread,
     )
@@ -137,7 +138,6 @@ def try_bandwidths_and_tolerance_ratios(
     kde_bandwidths: np.ndarray,
     fault_tolerance_ratios: np.ndarray,
     adjacency_matrix: np.ndarray,
-    num_variables: int,
     trafo_round_decimals: int,
     quiet: bool,
     world_name: str,
@@ -154,18 +154,18 @@ def try_bandwidths_and_tolerance_ratios(
     other bandwidths, as the next runs will be with bigger bandwidths, leading to bigger
     bins and are therefore sure to also time out.
 
-    :param error_value_limit:
-    :param current_percentage:
+    :param current_percentage: The percentage of (unique) observations in the
     :param kde_bandwidths: An sorted iterable of bandwidths.
     :param fault_tolerance_ratios: An iterable of fault_tolerance_ratios.
     :param adjacency_matrix: The adjacency matrix of the graph whose symmetries we
     want to find.
-    :param num_variables:
+    number of rows or columns of the adjacency matrix.
     :param quiet: A parameter to limit the number of console and log-outputs.
     :param norm: The norm to use for the integer program.
     :param world_name: The name of the testcase.
     :param trafo_round_decimals:
     :param use_integer_programming:
+    :param error_value_limit: The maximum
     :param parameter_study_results: A list of tuples containing the result of the
     excel sheet. The individual tuples correspond to rows within the excel sheet.
     :param time_per_iteration: The time each individual transformation-finding run (
@@ -179,6 +179,7 @@ def try_bandwidths_and_tolerance_ratios(
             if not timed_out:
                 results = [None] * 2
                 stop_thread = False
+                num_variables = adjacency_matrix.shape[0]
                 thread = threading.Thread(
                     target=find_trafos_wrapper,
                     args=(
@@ -189,6 +190,7 @@ def try_bandwidths_and_tolerance_ratios(
                         kde_bandwidth,
                         world_name,
                         norm,
+                        error_value_limit,
                         use_integer_programming,
                         results,
                         lambda: stop_thread,
@@ -212,14 +214,15 @@ def try_bandwidths_and_tolerance_ratios(
 
                 if thread.is_alive():
                     logger.warning(f"Calculation of trafos timed out.")
-                    timed_out = True
                     # If a given bandwidth has timed out, all other subsequent
                     # bandwidths (as we assume an ordered list) will time out as well.
                     # Set this flag in order to skip them.
+                    timed_out = True
                     parameters = (
                         current_percentage,
                         kde_bandwidth,
                         trafo_fault_tolerance_ratio,
+                        error_value_limit,
                         "Timeout",
                         "Timeout",
                         "Timeout",
@@ -244,6 +247,7 @@ def try_bandwidths_and_tolerance_ratios(
                         current_percentage,
                         kde_bandwidth,
                         trafo_fault_tolerance_ratio,
+                        error_value_limit,
                         len(trafos),
                         average_matchrate_per_trafo,
                         num_generators,
@@ -256,12 +260,14 @@ def try_bandwidths_and_tolerance_ratios(
                         f"percentage_observations = {current_percentage},  "
                         f"kde_bandwidth = {round(kde_bandwidth, 12)},  "
                         f"trafo_fault_tolerance_ratio = {trafo_fault_tolerance_ratio},  "
+                        f"error_value_limit = {error_value_limit},  "
                         f"num_found_trafos = {len(trafos)},  "
                         f"average_matchrate_per_trafo = "
                         f"{average_matchrate_per_trafo},  "
                         f"num_generators = {num_generators},  "
                         f"all_fundamentals_contained = {all_fundamentals_contained},  "
                         f"group_order = {group_order},  "
+                        f"time = {round(time.time() - time_start, 2)}",
                     )
             else:
                 # As a previous, smaller bandwidth already timed out, we can safely skip
@@ -270,6 +276,7 @@ def try_bandwidths_and_tolerance_ratios(
                     current_percentage,
                     kde_bandwidth,
                     trafo_fault_tolerance_ratio,
+                    error_value_limit,
                     "skipped",
                     "skipped",
                     "skipped",
@@ -385,7 +392,7 @@ def num_generators_contained(
 
 
 if __name__ == "__main__":
-    num_columns = 9
+    num_columns = 10
     logging.basicConfig(
         format="%(asctime)s [%(levelname)s] %(message)s",
         handlers=[logging.StreamHandler(sys.stdout)],
@@ -469,6 +476,7 @@ if __name__ == "__main__":
         "percentage_observation",
         "kde_bandwidth",
         "trafo_fault_tolerance_ratio",
+        "error_value_limit",
         "num_found_trafos",
         "average_matchrate_per_trafo",
         "num_generators",

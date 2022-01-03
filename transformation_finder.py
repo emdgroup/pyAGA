@@ -1,22 +1,23 @@
 import logging
+import threading
 from typing import List, Union, Set, Callable
 
 import numpy as np
-import sys
-
 from sympy.combinatorics import PermutationGroup, Permutation
 
 import kernel_density
 import verify_transformations as vt
 
 import local_import_paths
+
 local_import_paths.import_paths()
 from mipsym.mip import Norm, Solver
 from mipsym.mip_reduced import create_reduced_mip_model
 from mipsym.mip import create_mip_solver
 from mipsym.tools import to_ndarray, to_list, to_matrix, matshow, deviation_value
 
-logger = logging.getLogger("trafofinder_presolving")
+logger = logging.getLogger('trafofinder_presolving')
+
 
 def print_permutation(text: str, norm: Norm, a: np.ndarray, perm: List[int]):
     p = vt.to_matrix(perm)
@@ -33,6 +34,7 @@ def find_trafos(
     bandwidth: float,
     casename: str,
     norm: Norm,
+    error_value_limit,
     use_integer_programming: bool,
     stop_thread: Callable[[None], bool] = None,
 ) -> List[List[Union[int, None]]]:
@@ -46,6 +48,8 @@ def find_trafos(
     :param bandwidth: The bandwidth parameter for the kernel density estimation and
     subsequent bin calculation.
     :param casename: The name of the testcase.
+    :param norm: The norm used to calculate the deviation value (the error term).
+    :param error_value_limit:
     :param use_integer_programming: Whether or not to use the integer programming
     routines to fill out partial transformations.
     :param stop_thread: This function passes along a lambda callback to tell this
@@ -56,7 +60,12 @@ def find_trafos(
     """
     if round_decimals is not None:
         adjacency_matrix = adjacency_matrix.round(round_decimals)
-    bins = kernel_density.bins(adjacency_matrix, bandwidth=bandwidth, plot=not quiet)
+    bins = kernel_density.bins(
+        adjacency_matrix,
+        bandwidth=bandwidth,
+        plot=logger.level == logging.DEBUG
+        and threading.currentThread() is threading.main_thread(),
+    )
     labels = np.digitize(adjacency_matrix, bins=bins)
     unique_values, _ = np.unique(labels, return_counts=True)
     equivalency_classes = []
@@ -74,7 +83,7 @@ def find_trafos(
     # Quick and dirty way to implement mutable python ints. Yeah, I know.
     number_of_MIP_calls = [0]
     calculate_trafos(adjacency_matrix, equivalency_classes, possible_mappings, quiet,
-                     fault_tolerance, matching_rates, casename, norm,
+                     fault_tolerance, matching_rates, casename, norm, error_value_limit,
                      use_integer_programming, number_of_MIP_calls, trafos, stop_thread)
     if stop_thread is not None and stop_thread():
         return [None, None]
@@ -82,20 +91,13 @@ def find_trafos(
         return trafos, sum(matching_rates) / len(matching_rates)
 
 
-def calculate_trafos(
-    adjacency_matrix: np.ndarray,
-    equivalency_classes: List[List[np.ndarray]],
-    possible_mappings: List[Set],
-    quiet: bool,
-    fault_tolerance: int,
-    matching_rates: List[float],
-    casename: str,
-    norm: Norm,
-    use_integer_programming: bool,
-    number_of_MIP_calls: List[int],
-    result: List[List[Union[int, None]]],
-    stop_thread,
-) -> None:
+def calculate_trafos(adjacency_matrix: np.ndarray,
+                     equivalency_classes: List[List[np.ndarray]],
+                     possible_mappings: List[Set], quiet: bool, fault_tolerance: int,
+                     matching_rates: List[float], casename: str, norm: Norm,
+                     error_value_limit, use_integer_programming: bool,
+                     number_of_MIP_calls: List[int],
+                     result: List[List[Union[int, None]]], stop_thread) -> None:
     """Calculate the transformations with the given possible mappings. This function
     is called recursively, until all sets in the possible mappings have at most one
     entry.
@@ -110,6 +112,8 @@ def calculate_trafos(
     :param fault_tolerance: The number of tolerated unmappable nodes.
     :param matching_rates: The list containing the matchrates of the found
     :param casename: The name of the testcase.
+    :param norm: The norm used to calculate the deviation value (the error term).
+    :param error_value_limit:
     :param use_integer_programming: Whether or not to use the integer programming
     routines to fill out partial transformations.
     :param number_of_MIP_calls: A hacked mutable int (a list containing only one
@@ -124,7 +128,7 @@ def calculate_trafos(
         return
 
     number_of_matches = {
-        'impossible':  sum(1 for i in possible_mappings if len(i) == 0),
+        'impossible': sum(1 for i in possible_mappings if len(i) == 0),
         'perfect': sum(1 for i in possible_mappings if len(i) == 1),
         'unsure': sum(1 for i in possible_mappings if len(i) > 1),
     }
@@ -143,25 +147,20 @@ def calculate_trafos(
                 node_of_shortest = i
         # ... and just try all candidates in there via a recursive call
         for potential_target in possible_mappings[node_of_shortest]:
-            new_poss = filter_perms(equivalency_classes, list(possible_mappings), node_of_shortest, potential_target)
-            if new_poss == possible_mappings:
-                logger.error("This should not happen. Please assure that all "
-                             "self-concurrences have fallen into the same bin.")
-                assert False
-            calculate_trafos(
-                adjacency_matrix,
+            new_poss = filter_perms(
                 equivalency_classes,
-                new_poss,
-                quiet,
-                fault_tolerance,
-                matching_rates,
-                casename,
-                norm,
-                use_integer_programming,
-                number_of_MIP_calls,
-                result,
-                stop_thread,
+                list(possible_mappings),
+                node_of_shortest,
+                potential_target,
             )
+            if new_poss == possible_mappings:
+                logger.error('This should not happen. Please assure that all '
+                             'self-concurrences have fallen into the same bin.')
+                assert False
+            calculate_trafos(adjacency_matrix, equivalency_classes, new_poss, quiet,
+                             fault_tolerance, matching_rates, casename, norm,
+                             error_value_limit, use_integer_programming,
+                             number_of_MIP_calls, result, stop_thread)
     else:
         # Check if possible_mappings contains identical single_element entries
         perfectly_matched = [list(mapping)[0] for mapping in possible_mappings if len(mapping) == 1]
@@ -181,21 +180,20 @@ def calculate_trafos(
                 # Calculate all powers of every permutation which we could complete
                 # using MIP.
                 all_group_elements = map(
-                    lambda perm: list(perm),
-                    PermutationGroup(permutations).elements
+                    lambda perm: list(perm), PermutationGroup(permutations).elements
                 )
                 for perm in all_group_elements:
                     if perm not in result:
                         result.append(perm)
                 matching_rates.append(1)
-                if not quiet:
+                if logger.level <= logging.INFO:
                     print_permutation(
                         f'Permutation number {len(result)} matched all nodes.',
                         norm,
                         adjacency_matrix,
-                        permutation
+                        permutation,
                     )
-                    logger.debug("\n" + matshow(to_matrix(permutation)))
+                logger.debug('\n' + matshow(to_matrix(permutation)))
             else:
                 logger.info(
                     'The transformation generated in the presolving step is'
@@ -204,17 +202,16 @@ def calculate_trafos(
         else:
             # for at least one node there is no target node left
 
-
-
             # nodes either have exactly one match target or cannot be matched at all
 
             permutation = [s.pop() if len(s) > 0 else None for s in possible_mappings]
             matching_rate = number_of_matches['perfect'] / len(possible_mappings)
 
-            if not quiet:
-                logger.info(f'Incomplete permutation number {len(result)} matched '
-                            f'{number_of_matches["perfect"]} nodes.')
-                logger.info(permutation)
+            logger.info(
+                f'Incomplete permutation number {len(result)} matched '
+                f'{number_of_matches["perfect"]} nodes.'
+            )
+            logger.info(permutation)
 
             if vt.verify_one_transformation(permutation, result):
                 logger.info(
@@ -236,19 +233,21 @@ def calculate_trafos(
                 
                 # Calculate a temporary complete permutation that assigns unmapped vertices in some way
                 # Idea is to apply this to the adjacency matrix s.t. one obtains correctly permuted A_row, A_col
-                
+
                 tmp_filled_permutation = permutation[:]
                 for i in range(len(col_index_map)):
                     tmp_filled_permutation[row_index_map[i]] = col_index_map[i]
-                    
+
                 tmp_p_matrix = to_matrix(tmp_filled_permutation)
-                A_l = tmp_p_matrix@adjacency_matrix
-                A_r = adjacency_matrix@tmp_p_matrix
+                A_l = tmp_p_matrix @ adjacency_matrix
+                A_r = adjacency_matrix @ tmp_p_matrix
 
                 # Solve the reduced problem
                 # Currently WIP, not fully integrated yet
                 solver = Solver.SCIP
-                model = create_reduced_mip_model(norm, A_l, A_r, col_index_map, row_index_map)
+                model = create_reduced_mip_model(
+                    norm, A_l, A_r, col_index_map, row_index_map
+                )
                 ip_solver, solve_params = create_mip_solver(solver, norm)
 
                 try:
@@ -258,10 +257,12 @@ def calculate_trafos(
                         tee=not quiet,
                         timelimit=None,
                         report_timing=True,
-                        **solve_params
+                        **solve_params,
                     )
 
-                    reduced_p = to_ndarray(model.P, len(col_index_map), len(row_index_map))
+                    reduced_p = to_ndarray(
+                        model.P, len(col_index_map), len(row_index_map)
+                    )
                     reduced_permutation = to_list(reduced_p)
 
                     filled_permutation = permutation[:]
@@ -269,24 +270,39 @@ def calculate_trafos(
                         assert filled_permutation[row_index_map[i]] is None
                         filled_permutation[row_index_map[i]] = col_index_map[p]
 
-                    if not quiet:
-                        logger.info('Solver Result:\n' + str(ip_results))
-                        print_permutation('Filled Permutation.', norm, adjacency_matrix, filled_permutation)
+                    logger.info('Solver Result:\n' + str(ip_results))
+                    print_permutation(
+                        'Filled Permutation.',
+                        norm,
+                        adjacency_matrix,
+                        filled_permutation,
+                    )
 
                     permutation = filled_permutation
-
-                    new_permutation = Permutation(permutation)
-                    permutations_already_found = [Permutation(perm) for perm in result]
-                    permutations = [new_permutation] + permutations_already_found
-                    # Calculate all powers of every permutation which we could complete
-                    # using MIP.
-                    all_group_elements = map(
-                        lambda perm: list(perm),
-                        PermutationGroup(permutations).elements
+                    deviation = deviation_value(
+                        norm,
+                        to_matrix(permutation),
+                        adjacency_matrix
                     )
-                    for perm in all_group_elements:
-                        if perm not in result:
-                            result.append(perm)
+                    if deviation < error_value_limit:
+                        new_permutation = Permutation(permutation)
+                        permutations_already_found = [Permutation(perm) for perm in result]
+                        permutations = [new_permutation] + permutations_already_found
+                        # Calculate all powers of every permutation which we could complete
+                        # using MIP.
+                        all_group_elements = map(
+                            lambda perm: list(perm), PermutationGroup(permutations).elements
+                        )
+                        for perm in all_group_elements:
+                            if perm not in result:
+                                result.append(perm)
+                    else:
+                        logger.info(
+                            f'Filled permutation {permutation} with MIP, '
+                            f'but the deviation value {deviation} is '
+                            f'higher than the limit of {error_value_limit}.'
+                        )
+
                     matching_rate = 1
 
                 except RuntimeError:
@@ -298,8 +314,7 @@ def calculate_trafos(
 
             matching_rates.append(matching_rate)
 
-            if not quiet:
-                logger.debug("\n" + matshow(to_matrix(permutation)))
+            logger.debug('\n' + matshow(to_matrix(permutation)))
 
 
 def filter_perms(
