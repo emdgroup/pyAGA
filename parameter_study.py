@@ -117,7 +117,7 @@ def find_trafos_wrapper(
     :param stop_thread: This function passes along a lambda callback to tell this
     thread to terminate.
     """
-    trafos, average_matchrate_per_trafo = find_trafos(
+    trafos, average_matchrate_per_trafo, number_of_MIP_calls = find_trafos(
         correlation_matrix,
         fault_tolerance=fault_tolerance,
         round_decimals=trafo_round_decimals,
@@ -131,6 +131,7 @@ def find_trafos_wrapper(
     )
     result[0] = trafos
     result[1] = average_matchrate_per_trafo
+    result[2] = number_of_MIP_calls
 
 
 def try_bandwidths_and_tolerance_ratios(
@@ -177,7 +178,7 @@ def try_bandwidths_and_tolerance_ratios(
     for kde_bandwidth in kde_bandwidths:
         for trafo_fault_tolerance_ratio in fault_tolerance_ratios:
             if not timed_out:
-                results = [None] * 2
+                results = [None] * 3
                 stop_thread = False
                 num_variables = adjacency_matrix.shape[0]
                 thread = threading.Thread(
@@ -228,6 +229,8 @@ def try_bandwidths_and_tolerance_ratios(
                         "Timeout",
                         "Timeout",
                         "Timeout",
+                        "Timeout",
+                        "Timeout",
                         round(time.time() - time_start, 2),
                     )
 
@@ -235,7 +238,7 @@ def try_bandwidths_and_tolerance_ratios(
                     while thread.is_alive():
                         time.sleep(0.5)
                 else:
-                    trafos, average_matchrate_per_trafo = results
+                    trafos, average_matchrate_per_trafo, number_of_MIP_calls = results
                     (
                         num_generators,
                         all_fundamentals_contained,
@@ -253,6 +256,8 @@ def try_bandwidths_and_tolerance_ratios(
                         num_generators,
                         all_fundamentals_contained,
                         group_order,
+                        number_of_MIP_calls.valid[0],
+                        number_of_MIP_calls.invalid[0],
                         round(time.time() - time_start, 2),
                     )
                     assert len(parameters) == num_columns
@@ -267,7 +272,10 @@ def try_bandwidths_and_tolerance_ratios(
                         f"num_generators = {num_generators},  "
                         f"all_fundamentals_contained = {all_fundamentals_contained},  "
                         f"group_order = {group_order},  "
-                        f"time = {round(time.time() - time_start, 2)}",
+                        f"number_of_MIP_calls.valid = {number_of_MIP_calls.valid[0]},   "
+                        f"number_of_MIP_calls.invalid = "
+                        f"{number_of_MIP_calls.invalid[0]},   "
+                        f"time = {round(time.time() - time_start, 2)} s"
                     )
             else:
                 # As a previous, smaller bandwidth already timed out, we can safely skip
@@ -283,12 +291,15 @@ def try_bandwidths_and_tolerance_ratios(
                     "skipped",
                     "skipped",
                     "skipped",
+                    "skipped",
+                    "skipped",
                 )
                 assert len(parameters) == num_columns
                 logger.info(
                     f"percentage_observations = {current_percentage},  "
                     f"kde_bandwidth = {round(kde_bandwidth, 12)},  "
                     f"trafo_fault_tolerance_ratio = {trafo_fault_tolerance_ratio},  "
+                    f"error_value_limit = {error_value_limit},  "
                     f"num_found_trafos = skipped,  "
                     f"average_matchrate_per_trafo = skipped,  "
                 )
@@ -392,7 +403,7 @@ def num_generators_contained(
 
 
 if __name__ == "__main__":
-    num_columns = 10
+    num_columns = 12
     logging.basicConfig(
         format="%(asctime)s [%(levelname)s] %(message)s",
         handlers=[logging.StreamHandler(sys.stdout)],
@@ -482,6 +493,8 @@ if __name__ == "__main__":
         "num_generators",
         "fundamental_generators_contained",
         "permutation_group_order",
+        "number_of_MIP_calls.valid",
+        "number_of_MIP_calls.invalid",
         "time for calculation",
     ]
     assert len(columns) == num_columns

@@ -1,5 +1,6 @@
 import logging
 import threading
+from types import SimpleNamespace
 from typing import List, Union, Set, Callable
 
 import numpy as np
@@ -81,23 +82,43 @@ def find_trafos(
     matching_rates = []
     trafos = []
     # Quick and dirty way to implement mutable python ints. Yeah, I know.
-    number_of_MIP_calls = [0]
-    calculate_trafos(adjacency_matrix, equivalency_classes, possible_mappings, quiet,
-                     fault_tolerance, matching_rates, casename, norm, error_value_limit,
-                     use_integer_programming, number_of_MIP_calls, trafos, stop_thread)
+    number_of_MIP_calls = SimpleNamespace(valid=[0], invalid=[0])
+    calculate_trafos(
+        adjacency_matrix,
+        equivalency_classes,
+        possible_mappings,
+        quiet,
+        fault_tolerance,
+        matching_rates,
+        casename,
+        norm,
+        error_value_limit,
+        use_integer_programming,
+        number_of_MIP_calls,
+        trafos,
+        stop_thread,
+    )
     if stop_thread is not None and stop_thread():
-        return [None, None]
+        return [None, None, None]
     else:
-        return trafos, sum(matching_rates) / len(matching_rates)
+        return trafos, sum(matching_rates) / len(matching_rates), number_of_MIP_calls
 
 
-def calculate_trafos(adjacency_matrix: np.ndarray,
-                     equivalency_classes: List[List[np.ndarray]],
-                     possible_mappings: List[Set], quiet: bool, fault_tolerance: int,
-                     matching_rates: List[float], casename: str, norm: Norm,
-                     error_value_limit, use_integer_programming: bool,
-                     number_of_MIP_calls: List[int],
-                     result: List[List[Union[int, None]]], stop_thread) -> None:
+def calculate_trafos(
+    adjacency_matrix: np.ndarray,
+    equivalency_classes: List[List[np.ndarray]],
+    possible_mappings: List[Set],
+    quiet: bool,
+    fault_tolerance: int,
+    matching_rates: List[float],
+    casename: str,
+    norm: Norm,
+    error_value_limit,
+    use_integer_programming: bool,
+    number_of_MIP_calls: List[int],
+    result: List[List[Union[int, None]]],
+    stop_thread,
+) -> None:
     """Calculate the transformations with the given possible mappings. This function
     is called recursively, until all sets in the possible mappings have at most one
     entry.
@@ -154,13 +175,26 @@ def calculate_trafos(adjacency_matrix: np.ndarray,
                 potential_target,
             )
             if new_poss == possible_mappings:
-                logger.error('This should not happen. Please assure that all '
-                             'self-concurrences have fallen into the same bin.')
+                logger.error(
+                    'This should not happen. Please assure that all '
+                    'self-concurrences have fallen into the same bin.'
+                )
                 assert False
-            calculate_trafos(adjacency_matrix, equivalency_classes, new_poss, quiet,
-                             fault_tolerance, matching_rates, casename, norm,
-                             error_value_limit, use_integer_programming,
-                             number_of_MIP_calls, result, stop_thread)
+            calculate_trafos(
+                adjacency_matrix,
+                equivalency_classes,
+                new_poss,
+                quiet,
+                fault_tolerance,
+                matching_rates,
+                casename,
+                norm,
+                error_value_limit,
+                use_integer_programming,
+                number_of_MIP_calls,
+                result,
+                stop_thread,
+            )
     else:
         # Check if possible_mappings contains identical single_element entries
         perfectly_matched = [list(mapping)[0] for mapping in possible_mappings if len(mapping) == 1]
@@ -221,16 +255,19 @@ def calculate_trafos(adjacency_matrix: np.ndarray,
                 return
 
             if use_integer_programming:
-                number_of_MIP_calls[0] += 1
-                logger.info(f'MIP call #{number_of_MIP_calls[0]}')
+                # Count the number of total MIP calls, starting from 1
+                logger.info(
+                    f'MIP call #'
+                    f'{number_of_MIP_calls.valid[0] + number_of_MIP_calls.invalid[0] + 1}'
+                )
                 logger.info('Trying to fill missing entries in permutation using MIP')
 
                 # Construct a reduced MIP only containing rows/cols that are still not resolved
                 # Mappings for identifying the rows/cols of the reduced problem and corresponding matrices
-                
+
                 row_index_map = [i for i, p in enumerate(permutation) if p is None]
                 col_index_map = [i for i, _ in enumerate(permutation) if i not in permutation]
-                
+
                 # Calculate a temporary complete permutation that assigns unmapped vertices in some way
                 # Idea is to apply this to the adjacency matrix s.t. one obtains correctly permuted A_row, A_col
 
@@ -280,23 +317,26 @@ def calculate_trafos(adjacency_matrix: np.ndarray,
 
                     permutation = filled_permutation
                     deviation = deviation_value(
-                        norm,
-                        to_matrix(permutation),
-                        adjacency_matrix
+                        norm, to_matrix(permutation), adjacency_matrix
                     )
                     if deviation < error_value_limit:
+                        number_of_MIP_calls.valid[0] += 1
                         new_permutation = Permutation(permutation)
-                        permutations_already_found = [Permutation(perm) for perm in result]
+                        permutations_already_found = [
+                            Permutation(perm) for perm in result
+                        ]
                         permutations = [new_permutation] + permutations_already_found
                         # Calculate all powers of every permutation which we could complete
                         # using MIP.
                         all_group_elements = map(
-                            lambda perm: list(perm), PermutationGroup(permutations).elements
+                            lambda perm: list(perm),
+                            PermutationGroup(permutations).elements,
                         )
                         for perm in all_group_elements:
                             if perm not in result:
                                 result.append(perm)
                     else:
+                        number_of_MIP_calls.invalid[0] += 1
                         logger.info(
                             f'Filled permutation {permutation} with MIP, '
                             f'but the deviation value {deviation} is '
