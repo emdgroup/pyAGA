@@ -223,6 +223,9 @@ def try_bandwidths_and_tolerance_ratios(
                         current_percentage,
                         kde_bandwidth,
                         trafo_fault_tolerance_ratio,
+                        trafo_round_decimals
+                        if trafo_round_decimals is not None
+                        else "None",
                         error_value_limit,
                         "Timeout",
                         "Timeout",
@@ -250,6 +253,9 @@ def try_bandwidths_and_tolerance_ratios(
                         current_percentage,
                         kde_bandwidth,
                         trafo_fault_tolerance_ratio,
+                        trafo_round_decimals
+                        if trafo_round_decimals is not None
+                        else "None",
                         error_value_limit,
                         len(trafos),
                         average_matchrate_per_trafo,
@@ -265,6 +271,7 @@ def try_bandwidths_and_tolerance_ratios(
                         f"percentage_observations = {current_percentage},  "
                         f"kde_bandwidth = {round(kde_bandwidth, 12)},  "
                         f"trafo_fault_tolerance_ratio = {trafo_fault_tolerance_ratio},  "
+                        f"trafo_round_decimals = {trafo_round_decimals},   "
                         f"error_value_limit = {error_value_limit},  "
                         f"num_found_trafos = {len(trafos)},  "
                         f"average_matchrate_per_trafo = "
@@ -284,6 +291,9 @@ def try_bandwidths_and_tolerance_ratios(
                     current_percentage,
                     kde_bandwidth,
                     trafo_fault_tolerance_ratio,
+                    trafo_round_decimals
+                    if trafo_round_decimals is not None
+                    else "None",
                     error_value_limit,
                     "skipped",
                     "skipped",
@@ -403,7 +413,7 @@ def num_generators_contained(
 
 
 if __name__ == "__main__":
-    num_columns = 12
+    num_columns = 13
     logging.basicConfig(
         format="%(asctime)s [%(levelname)s] %(message)s",
         handlers=[logging.StreamHandler(sys.stdout)],
@@ -487,6 +497,7 @@ if __name__ == "__main__":
         "percentage_observation",
         "kde_bandwidth",
         "trafo_fault_tolerance_ratio",
+        "trafo_round_decimals",
         "error_value_limit",
         "num_found_trafos",
         "average_matchrate_per_trafo",
