@@ -382,25 +382,94 @@ def num_generators_contained(
     # Verify that all fundamental generators are present in the permutation group
     fundamental_generators = []
     num_horizontal_pixels, num_vertical_pixels = map(
-        lambda x: int(x), study_name.split("x")
+        # study_name is the argument passed to parameter_study
+        # e.g. if study_name == "10x5", then the first split just turns it into ["10x5"]
+        # otherwise if the parameter is a longer study_name seperated by "_", the rest
+        # is discarded
+        lambda x: int(x),
+        study_name.split("_")[0].split("x"),
     )
+    with_colors = "colors" in study_name
+    # Hardcoded for now. TODO: Change
+    color_depth = 3 if with_colors else 1
+
     # Create horizontal shift by one pixel
     horizontal_shift = []
-    column = np.arange(0, num_vertical_pixels)
+    column = np.arange(0, num_vertical_pixels * color_depth)
     for i in range(1, num_horizontal_pixels):
-        horizontal_shift.extend((column + i * num_vertical_pixels).tolist())
+        horizontal_shift.extend(
+            (column + i * num_vertical_pixels * color_depth).tolist()
+        )
     horizontal_shift.extend(column.tolist())
     fundamental_generators.append(Permutation(horizontal_shift))
 
     # Create vertical shift by one pixel
     vertical_shift = []
-    column = np.array(list((range(1, num_vertical_pixels))) + [0])
+    column = np.array(
+        list((range(color_depth, num_vertical_pixels * color_depth)))
+        + list(range(color_depth))
+    )
     for i in range(0, num_horizontal_pixels):
-        vertical_shift.extend((column + i * num_vertical_pixels).tolist())
+        vertical_shift.extend((column + i * num_vertical_pixels * color_depth).tolist())
     fundamental_generators.append(Permutation(vertical_shift))
-    # Create flip
-    flip = list(range(num_horizontal_pixels * num_vertical_pixels - 1, -1, -1))
-    fundamental_generators.append(Permutation(flip))
+    with_rotations = "rotations" in study_name
+    if "rotations" not in study_name:
+        # Create flip
+        flip_without_colors = list(
+            range(num_horizontal_pixels * num_vertical_pixels - 1, -1, -1)
+        )
+        flip = []
+        for f in flip_without_colors:
+            temp = []
+            for c in range(color_depth):
+                temp.append(f * color_depth + c)
+            flip.extend(temp)
+        fundamental_generators.append(Permutation(flip))
+    else:
+        # Create 90 degree rotation
+        assert num_horizontal_pixels == num_vertical_pixels
+        rotation_without_colors = np.roll(
+            np.arange(0, num_horizontal_pixels ** 2).reshape(
+                num_horizontal_pixels, num_horizontal_pixels
+            ),
+            shift=-1,
+            axis=0,
+        ).T[:, ::-1].flatten()
+        rotation = []
+        for r in rotation_without_colors:
+            temp = []
+            for c in range(color_depth):
+                temp.append(r * color_depth + c)
+            rotation.extend(temp)
+        fundamental_generators.append(Permutation(rotation))
+
+    if with_colors:
+        # Create symmetric color shift
+        symmetric_color_shift = []
+        symmetric_color_singlet = np.array(list(range(1, color_depth)) + [0])
+        for i in range(num_horizontal_pixels):
+            for j in range(num_vertical_pixels):
+                symmetric_color_shift.extend(
+                    (
+                        symmetric_color_singlet
+                        + j * color_depth
+                        + i * num_vertical_pixels * color_depth
+                    ).tolist()
+                )
+        fundamental_generators.append(Permutation(symmetric_color_shift))
+
+        antisymmetric_color_shift = []
+        antisymmetric_color_singlet = np.arange(color_depth - 1, -1, -1)
+        for i in range(num_horizontal_pixels):
+            for j in range(num_vertical_pixels):
+                antisymmetric_color_shift.extend(
+                    (
+                        antisymmetric_color_singlet
+                        + j * color_depth
+                        + i * num_vertical_pixels * color_depth
+                    ).tolist()
+                )
+        fundamental_generators.append(Permutation(antisymmetric_color_shift))
 
     all_fundamental_generators_present = True
     permutation_group = PermutationGroup(permutation_group_generators)
@@ -408,6 +477,11 @@ def num_generators_contained(
         if fundamental_generator not in permutation_group:
             all_fundamental_generators_present = False
             break
+        else:
+            logger.debug(
+                f"The fundamental generator {fundamental_generator} is present in the "
+                f"generated permutation group."
+            )
     group_order = permutation_group.order()
     return len(tmp), all_fundamental_generators_present, group_order
 
