@@ -65,7 +65,7 @@ with open(mat_filename, "rb") as correlation_matrix_file:
     correlation_matrix = np.transpose(pickle.load(correlation_matrix_file))
     # trafos = find_trafos(correlation_matrix, trafo_accuracy)
     num_variables = correlation_matrix.shape[0]
-    trafos, average_matchrate_per_trafo = find_trafos(
+    trafos, average_matchrate_per_trafo, num_MIP_calls = find_trafos(
         correlation_matrix,
         fault_tolerance=int(
             trafo_fault_tolerance_ratio
@@ -81,7 +81,7 @@ with open(mat_filename, "rb") as correlation_matrix_file:
 
 
     # Experimental
-    # trafos, average_matchrate_per_trafo = find_trafos(
+    # trafos, average_matchrate_per_trafo, num_MIP_calls = find_trafos(
     #    correlation_matrix,
     #    fault_tolerance=int(
     #        trafo_fault_tolerance_ratio
