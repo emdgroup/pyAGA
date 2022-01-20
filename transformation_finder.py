@@ -227,8 +227,7 @@ def calculate_trafos(
                         adjacency_matrix,
                         permutation,
                     )
-                logger.debug("MATSHOW WOULD HAVE BEEN HERE")
-                # logger.debug('\n' + matshow(to_matrix(permutation)))
+                logger.debug('\n' + matshow(to_matrix(permutation)))
             else:
                 logger.info(
                     'The transformation generated in the presolving step is'
@@ -354,8 +353,7 @@ def calculate_trafos(
                 result.append(permutation)
 
             matching_rates.append(matching_rate)
-            logger.debug("MATSHOW WOULD HAVE BEEN HERE")
-            # logger.debug('\n' + matshow(to_matrix(permutation)))
+            logger.debug('\n' + matshow(to_matrix(permutation)))
 
 
 def filter_perms(
