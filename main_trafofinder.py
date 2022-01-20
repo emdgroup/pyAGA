@@ -96,10 +96,10 @@ with open(mat_filename, "rb") as correlation_matrix_file:
 
 if not quiet:
     logger.info(f"Total number of found trafos {len(trafos)}")
-    for i, trafo in enumerate(trafos):
-        matrix = to_matrix(trafo)
-        logger.info(f'Printing permutation number {i+1}')
-        logger.debug(matshow(matrix))
+    #for i, trafo in enumerate(trafos):
+    #    matrix = to_matrix(trafo)
+    #    logger.info(f'Printing permutation number {i+1}')
+    #    logger.info('\n' + matshow(matrix))
 
 # We try to find a small/minimal generating set for all valid-ish transformations as follows:
 # For all found transformations p_i, we compute all powers p_i^k and see if |p_i^k A - A p_i^k|
