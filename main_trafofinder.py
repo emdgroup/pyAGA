@@ -7,18 +7,15 @@ local_import_paths.import_paths()
 
 import logging
 import pickle
-from itertools import count
 import gzip
 import shutil
 
 import numpy as np
-from matplotlib import pyplot as plt
 from mipsym.mip import Norm
-from mipsym.tools import to_matrix, matshow, deviation_value
-from sympy.combinatorics import Permutation
-from sympy.combinatorics.perm_groups import PermutationGroup
+from mipsym.tools import to_matrix, matshow
 
 from transformation_finder import find_trafos
+from permutation_group_utils import find_simple_generators
 
 
 # world_name = "two_letter_words_20x10"
@@ -32,12 +29,12 @@ kde_bandwidth = 1e-3
 use_integer_programming = True
 quiet = False
 norm = Norm.L_INFINITY
-error_value_limit = 0.01
+error_value_limit = 0.005
 log_to_file = False
 
 
-log_filename = f'logs/{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.log'
 if log_to_file:
+    log_filename = f'logs/{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.log'
     os.makedirs("logs", exist_ok=True)
     handlers = [
         logging.FileHandler(log_filename, "w", "utf-8"),
@@ -101,61 +98,17 @@ if not quiet:
     #    logger.info(f'Printing permutation number {i+1}')
     #    logger.info('\n' + matshow(matrix))
 
-# We try to find a small/minimal generating set for all valid-ish transformations as follows:
-# For all found transformations p_i, we compute all powers p_i^k and see if |p_i^k A - A p_i^k|
-# is larger than a pre-set error bound. If yes, we omit p, otherwise, we build a permutation
-# group with all transformations found so far and see if p is already in there.
-# If so, we skip p, otherwise we add it to the permutation group.
 if not quiet:
-    logging.info('Trying to compute a small/minimal generating set for the found transformations...')
+    logging.debug('Trying to compute a small/minimal generating set for the found transformations...')
 
-id = np.eye(len(correlation_matrix))
-permutation_group_generators = []
-# during the filtering below, we will take note of the values of |p_i^k A - A p_i^k| to
-# plot a histogram in the end, which allows for more convenient tuning of the error_value_limit
-deviation_values = []
-
-for trafo in trafos:
-    generator = to_matrix(trafo)
-    current_power = generator
-    is_valid = True
-    for power in count(0):
-        if np.allclose(current_power, id):
-            break  # went through the full cycle of generator
-
-        deviation = deviation_value(norm, current_power, correlation_matrix)
-        deviation_values.append(deviation)
-        if deviation > error_value_limit:
-            logging.info(
-                f'Skipping a transformation due to deviation'
-                f' {deviation} > {error_value_limit}' 
-                f' for power {power}:\n{matshow(generator)}'
-            )
-            is_valid = False
-            break
-
-        current_power = current_power @ generator
-
-    if is_valid:
-        g = PermutationGroup(*permutation_group_generators)
-        p = Permutation(trafo)
-        if p not in g:
-            permutation_group_generators.append(p)
+simple_generators, permutation_group = find_simple_generators(trafos)
 
 if not quiet:
-    logger.info(f'Found generating set with {len(permutation_group_generators)} '
-                f'members:')
-    for i, gen in enumerate(permutation_group_generators):
-        logger.info(f'\nG_{i} =')
-        logger.info('\n' + matshow(to_matrix(gen.array_form)))
+    logger.info(f'Found generating set with {len(simple_generators)} members:')
+    for i, gen in enumerate(simple_generators):
+        logger.info(f'G_{i} =\n{matshow(to_matrix(gen.array_form))}')
 
-    g = PermutationGroup(*permutation_group_generators)
-    logger.info(f'Order of permutation group: {g.order()}')
-
-    plt.hist(deviation_values, bins=len(deviation_values))
-    plt.title('Histogram of |p_i^k A - A p_i^k| for all identified permutations')
-    plt.axvline(x=error_value_limit, color='red')
-    plt.show()
+    logger.info(f'Order of permutation group: {permutation_group.order()}')
 
 if log_to_file:
     # Compress log file, and remove uncompressed original afterwards.
