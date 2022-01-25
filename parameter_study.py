@@ -27,18 +27,20 @@ logger = logging.getLogger("trafofinder_presolving")
 
 def run_parameter_study(
     parameters: dict,
-    global_timeout: Callable[[None], bool],
     parameter_study_results: List[Tuple],
+    global_timeout: Callable[[None], bool],
 ) -> None:
     """The main function within this module, called from the if __name__ == "__main__"
-    statement. After running through or after getting told to exit via global_timeout,
-    it writes the previously computed values to an excel table and exits.
-    :param parameters:
-    :param parameter_study_results:
+    statement (in a seperate thread). After running through or after getting told to
+    exit via global_timeout, it returns the data computed up to this point such that
+    it can be written to an excel sheet.
+    :param parameters: The parameters for the parameter study, defined in the
+    corresponding .ini-file.
+    :param parameter_study_results: A list of tuples, where each tuple corresponds to a
+    run of the transformation_finder, and its elements are the parameter values.
     :param global_timeout: This function passes along a lambda callback to tell this
     thread to terminate.
     """
-    # world_name = "two_letter_words_20x10"
     world_name = parameters["world_name"]
     integer_matrices = parameters["integer_matrices"]
     trafo_round_decimals = parameters["trafo_round_decimals"]
@@ -56,10 +58,13 @@ def run_parameter_study(
         for percentage in percentages:
             if integer_matrices:
                 mat_filename = (
-                    f"data/{world_name}_integers_concurrence_matrix_" f"{percentage}.pickle"
+                    f"data/{world_name}_integers_concurrence_matrix_"
+                    f"{percentage}.pickle"
                 )
             else:
-                mat_filename = f"data/{world_name}_concurrence_matrix_{percentage}.pickle"
+                mat_filename = (
+                    f"data/{world_name}_concurrence_matrix_{percentage}.pickle"
+                )
             with open(mat_filename, "rb") as correlation_matrix_file:
                 logger.info(f"Loading matrix {mat_filename}")
                 correlation_matrix = np.transpose(pickle.load(correlation_matrix_file))
@@ -521,8 +526,8 @@ if __name__ == "__main__":
     global_stop_thread = False
 
     iterable_parameters = [
-        "error_value_limit",    # Keep both entries for clarity, even though the
-        "error_value_limits",   # singular string is always replaced by the plural.
+        "error_value_limit",  # Keep both entries for clarity, even though the
+        "error_value_limits",  # singular string is always replaced by the plural.
         "percentages",
         "kde_bandwidths",
         "fault_tolerance_ratios",
@@ -567,8 +572,8 @@ if __name__ == "__main__":
                 target=run_parameter_study,
                 args=(
                     parameters_parsed,
-                    lambda: global_stop_thread,
                     parameter_study_results,
+                    lambda: global_stop_thread,
                 ),
             )
 
