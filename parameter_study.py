@@ -428,13 +428,17 @@ def num_generators_contained(
     else:
         # Create 90 degree rotation
         assert num_horizontal_pixels == num_vertical_pixels
-        rotation_without_colors = np.roll(
-            np.arange(0, num_horizontal_pixels ** 2).reshape(
-                num_horizontal_pixels, num_horizontal_pixels
-            ),
-            shift=-1,
-            axis=0,
-        ).T[:, ::-1].flatten()
+        rotation_without_colors = (
+            np.roll(
+                np.arange(0, num_horizontal_pixels ** 2).reshape(
+                    num_horizontal_pixels, num_horizontal_pixels
+                ),
+                shift=-1,
+                axis=0,
+            )
+            .T[:, ::-1]
+            .flatten()
+        )
         rotation = []
         for r in rotation_without_colors:
             temp = []
@@ -511,7 +515,13 @@ if __name__ == "__main__":
     global_timeout = float(params["global_timeout"]["global_timeout"])
     global_stop_thread = False
 
-    iterable_parameters = ["percentages", "kde_bandwidths", "fault_tolerance_ratios"]
+    iterable_parameters = [
+        "error_value_limit",    # Keep both entries with the same value, as it was made
+        "error_value_limits",   # iterable late into development.
+        "percentages",
+        "kde_bandwidths",
+        "fault_tolerance_ratios",
+    ]
     parameter_study_results = []
     for testcase, parameters_not_parsed in params.items():
         if testcase == "global_timeout":
@@ -545,7 +555,6 @@ if __name__ == "__main__":
                     raise ValueError(f"No valid norm set for testcase {testcase}.")
             elif name == "world_name":
                 parameters_parsed[name] = value
-        signal_queue = []  # One could use a queue.Queue here, but this is not necessary
         if not global_stop_thread:
             thread = threading.Thread(
                 target=run_parameter_study,
