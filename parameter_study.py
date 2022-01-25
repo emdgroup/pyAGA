@@ -511,6 +511,7 @@ if __name__ == "__main__":
     global_timeout = float(params["global_timeout"]["global_timeout"])
     global_stop_thread = False
 
+    iterable_parameters = ["percentages", "kde_bandwidths", "fault_tolerance_ratios"]
     parameter_study_results = []
     for testcase, parameters_not_parsed in params.items():
         if testcase == "global_timeout":
@@ -519,7 +520,15 @@ if __name__ == "__main__":
         for name, value in parameters_not_parsed.items():
             if name != "world_name" and name != "norm":
                 try:
-                    parameters_parsed[name] = ast.literal_eval(value)
+                    parsed_value = ast.literal_eval(value)
+                    if name in iterable_parameters:
+                        try:
+                            _ = iter(parsed_value)
+                        except TypeError:
+                            # The parameter value should be iterable, but the value that
+                            # resulted from parsing isn't.
+                            parsed_value = (parsed_value,)
+                    parameters_parsed[name] = parsed_value
                 except ValueError as e:
                     logger.error(f"Error when parsing value of variable {name}.")
                     logger.error(e)
