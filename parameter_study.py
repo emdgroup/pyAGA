@@ -45,40 +45,41 @@ def run_parameter_study(
     use_integer_programming = parameters["use_integer_programming"]
     quiet = parameters["quiet"]
     norm = parameters["norm"]
-    error_value_limit = parameters["error_value_limit"]
+    error_value_limits = parameters["error_value_limits"]
     time_per_iteration = parameters["time_per_iteration"]
 
     percentages = parameters["percentages"]
     kde_bandwidths = parameters["kde_bandwidths"]
     fault_tolerance_ratios = parameters["fault_tolerance_ratios"]
 
-    for percentage in percentages:
-        if integer_matrices:
-            mat_filename = (
-                f"data/{world_name}_integers_concurrence_matrix_" f"{percentage}.pickle"
-            )
-        else:
-            mat_filename = f"data/{world_name}_concurrence_matrix_{percentage}.pickle"
-        with open(mat_filename, "rb") as correlation_matrix_file:
-            logger.info(f"Loading matrix {mat_filename}")
-            correlation_matrix = np.transpose(pickle.load(correlation_matrix_file))
-            try_bandwidths_and_tolerance_ratios(
-                percentage,
-                kde_bandwidths,
-                fault_tolerance_ratios,
-                correlation_matrix,
-                trafo_round_decimals,
-                quiet,
-                world_name,
-                norm,
-                use_integer_programming,
-                error_value_limit,
-                parameter_study_results,
-                time_per_iteration,
-                global_timeout,
-            )
-            if global_timeout():
-                break
+    for error_value_limit in error_value_limits:
+        for percentage in percentages:
+            if integer_matrices:
+                mat_filename = (
+                    f"data/{world_name}_integers_concurrence_matrix_" f"{percentage}.pickle"
+                )
+            else:
+                mat_filename = f"data/{world_name}_concurrence_matrix_{percentage}.pickle"
+            with open(mat_filename, "rb") as correlation_matrix_file:
+                logger.info(f"Loading matrix {mat_filename}")
+                correlation_matrix = np.transpose(pickle.load(correlation_matrix_file))
+                try_bandwidths_and_tolerance_ratios(
+                    percentage,
+                    kde_bandwidths,
+                    fault_tolerance_ratios,
+                    correlation_matrix,
+                    trafo_round_decimals,
+                    quiet,
+                    world_name,
+                    norm,
+                    use_integer_programming,
+                    error_value_limit,
+                    parameter_study_results,
+                    time_per_iteration,
+                    global_timeout,
+                )
+                if global_timeout():
+                    return
 
 
 def find_trafos_wrapper(
@@ -100,15 +101,16 @@ def find_trafos_wrapper(
     :param correlation_matrix: The adjacency matrix of the graph whose symmetries we
     want to find.
     :param fault_tolerance: The number of tolerated unmappable nodes.
-    :param trafo_round_decimals: The number of positions which will be left after
-    rounding.
+    :param trafo_round_decimals: The number of decimals left after rounding the adjacency
+    matrix values. If None, no rounding takes place.
     the adjacency matrix values.
     :param quiet: A parameter to limit the number of console and log-outputs.
     :param kde_bandwidth: The bandwidth parameter for the kernel density estimation and
     subsequent bin calculation.
     :param world_name: The name of the testcase.
     :param norm: The norm to use for the integer program.
-    :param error_value_limit:
+    :param error_value_limit: The limit for the deviation value of each group element in
+    order for the first one to be considered a valid generator.
     :param use_integer_programming: Whether or not to use the integer programming
     routines to fill out partial transformations.
     :param result: A tuple containing the found transformations as its first entry,
@@ -164,9 +166,11 @@ def try_bandwidths_and_tolerance_ratios(
     :param quiet: A parameter to limit the number of console and log-outputs.
     :param norm: The norm to use for the integer program.
     :param world_name: The name of the testcase.
-    :param trafo_round_decimals:
+    :param trafo_round_decimals: The number of decimals left after rounding the adjacency
+    matrix values. If None, no rounding takes place.
     :param use_integer_programming:
-    :param error_value_limit: The maximum
+    :param error_value_limit: The limit a permutation can deviate from a perfect
+    graph symmetry in order for it to be included in the permutation group.
     :param parameter_study_results: A list of tuples containing the result of the
     excel sheet. The individual tuples correspond to rows within the excel sheet.
     :param time_per_iteration: The time each individual transformation-finding run (
@@ -323,8 +327,9 @@ def num_generators_contained(
     error_value_limit: float,
 ) -> Tuple[int, bool, int]:
     """
-    Calculate the permutation groups and return the number of the corresponding
-    generators from the given transformations.
+    Calculate an upper bound for the number of generators necessary to generate the
+    permutation group of the given transformations. Also check if the "fundamental
+    generators" of each transformation are present in the transformations.
     :param trafos: The transformations from which to calculate the generators
     :param norm: The norm with which to compute the deviation value.
     :param adjacency_matrix: The adjacency matrix of the graph
@@ -516,8 +521,8 @@ if __name__ == "__main__":
     global_stop_thread = False
 
     iterable_parameters = [
-        "error_value_limit",    # Keep both entries with the same value, as it was made
-        "error_value_limits",   # iterable late into development.
+        "error_value_limit",    # Keep both entries for clarity, even though the
+        "error_value_limits",   # singular string is always replaced by the plural.
         "percentages",
         "kde_bandwidths",
         "fault_tolerance_ratios",
@@ -540,6 +545,8 @@ if __name__ == "__main__":
             elif name == "world_name":
                 parameters_parsed[name] = value
             else:
+                if name == "error_value_limit":
+                    name = "error_value_limits"
                 try:
                     parsed_value = ast.literal_eval(value)
                     if name in iterable_parameters:

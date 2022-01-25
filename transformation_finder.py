@@ -43,8 +43,8 @@ def find_trafos(
     Find all transformations (i.e. graph symmetries) on a given graph.
     :param adjacency_matrix: The adjacency matrix of the graph.
     :param fault_tolerance: The number of tolerated unmappable nodes.
-    :param round_decimals: The number of positions which will be left after rounding
-    the adjacency matrix values.
+    :param round_decimals: The number of decimals left after rounding the adjacency
+    matrix values. If None, no rounding takes place.
     :param quiet: Whether to print debugging information to the terminal.
     :param bandwidth: The bandwidth parameter for the kernel density estimation and
     subsequent bin calculation.
