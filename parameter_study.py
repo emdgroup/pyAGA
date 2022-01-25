@@ -528,7 +528,18 @@ if __name__ == "__main__":
             continue
         parameters_parsed = {}
         for name, value in parameters_not_parsed.items():
-            if name != "world_name" and name != "norm":
+            if name == "norm":
+                if value == "Norm.L_INFINITY":
+                    parameters_parsed[name] = Norm.L_INFINITY
+                elif value == "Norm.L_1":
+                    parameters_parsed[name] = Norm.L_1
+                elif value == "Norm.L_2":
+                    parameters_parsed[name] = Norm.L_2
+                else:
+                    raise ValueError(f"No valid norm set for testcase {testcase}.")
+            elif name == "world_name":
+                parameters_parsed[name] = value
+            else:
                 try:
                     parsed_value = ast.literal_eval(value)
                     if name in iterable_parameters:
@@ -544,17 +555,6 @@ if __name__ == "__main__":
                     logger.error(e)
                     logger.error(f"string was {value}")
                     sys.exit(1)
-            elif name == "norm":
-                if value == "Norm.L_INFINITY":
-                    parameters_parsed[name] = Norm.L_INFINITY
-                elif value == "Norm.L_1":
-                    parameters_parsed[name] = Norm.L_1
-                elif value == "Norm.L_2":
-                    parameters_parsed[name] = Norm.L_2
-                else:
-                    raise ValueError(f"No valid norm set for testcase {testcase}.")
-            elif name == "world_name":
-                parameters_parsed[name] = value
         if not global_stop_thread:
             thread = threading.Thread(
                 target=run_parameter_study,
