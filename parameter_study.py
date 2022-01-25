@@ -513,7 +513,7 @@ if __name__ == "__main__":
     except IndexError:
         logger.error("Please provide name of testcase")
         sys.exit(1)
-    filename_xlsx = f"{study_name}_results_{uuid.uuid4()}.xlsx"
+    filename_xlsx = f"parameter_study/results/{study_name}_results_{uuid.uuid4()}.xlsx"
     logger.info(f"Results table will be written to {filename_xlsx}")
     # config.read(f"parameter_study/parameter_study_{study_name}.ini")
     config_name = f"parameter_study/parameter_study_{study_name}.ini"
