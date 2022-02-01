@@ -3,7 +3,7 @@ import re
 
 import pandas as pd
 
-testcase = "15x15_rotations"
+testcase = "no_axsym_15x15_rotations"
 regex_str = f"{testcase}.*xlsx"
 expected_permutation_group_order = 900
 
@@ -11,7 +11,6 @@ dataframes = []
 for excel_sheet in os.listdir("results"):
     if re.match(regex_str, excel_sheet) is not None:
         df = pd.read_excel(f"results/{excel_sheet}")
-
         dataframes.append(df)
 
 
@@ -52,7 +51,8 @@ success_df = success_df.sort_values(by=sorting)
 too_many_df = too_many_df.sort_values(by=sorting)
 total_failure_df = total_failure_df.sort_values(by=sorting)
 
-success_df.to_excel(f"results/{testcase}_summary_success.xlsx")
-too_many_df.to_excel(f"results/{testcase}_summary_too_many_transformations.xlsx")
-total_failure_df.to_excel(f"results/{testcase}_summary_total_failure.xlsx")
+os.mkdir("results/summaries", exists_ok=True)
+success_df.to_excel(f"results/summaries/{testcase}_summary_success.xlsx")
+too_many_df.to_excel(f"results/summaries/{testcase}_summary_too_many_transformations.xlsx")
+total_failure_df.to_excel(f"results/summaries/{testcase}_summary_total_failure.xlsx")
 
