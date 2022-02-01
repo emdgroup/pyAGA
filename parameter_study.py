@@ -391,14 +391,19 @@ def num_generators_contained(
 
     # Verify that all fundamental generators are present in the permutation group
     fundamental_generators = []
-    num_horizontal_pixels, num_vertical_pixels = map(
-        # study_name is the argument passed to parameter_study
-        # e.g. if study_name == "10x5", then the first split just turns it into ["10x5"]
-        # otherwise if the parameter is a longer study_name seperated by "_", the rest
-        # is discarded
-        lambda x: int(x),
-        study_name.split("_")[0].split("x"),
-    )
+    if dimensions is None:
+        num_horizontal_pixels, num_vertical_pixels = map(
+            # study_name is the argument passed to parameter_study
+            # e.g. if study_name == "10x5", then the first split just turns it into ["10x5"]
+            # otherwise if the parameter is a longer study_name seperated by "_", the rest
+            # is discarded
+            lambda x: int(x),
+            study_name.split("_")[0].split("x"),
+        )
+    else:
+        # dimensions[0] is always 1 in 2D testcases
+        num_horizontal_pixels = dimensions[1]
+        num_vertical_pixels = dimensions[2]
     with_colors = "colors" in study_name
     # Hardcoded for now. TODO: Change
     color_depth = 3 if with_colors else 1
@@ -532,6 +537,7 @@ if __name__ == "__main__":
         "kde_bandwidths",
         "fault_tolerance_ratios",
     ]
+    dimensions = None
     parameter_study_results = []
     for testcase, parameters_not_parsed in params.items():
         if testcase == "global_timeout":
@@ -549,6 +555,8 @@ if __name__ == "__main__":
                     raise ValueError(f"No valid norm set for testcase {testcase}.")
             elif name == "world_name":
                 parameters_parsed[name] = value
+            elif name == "dimensions":
+                dimensions = ast.literal_eval(value)
             else:
                 if name == "error_value_limit":
                     name = "error_value_limits"
