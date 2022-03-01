@@ -214,11 +214,14 @@ def try_bandwidths_and_tolerance_ratios(
                 thread.start()
                 # Wait until the timeout value has been reached (timeout value is given
                 # in seconds).
+                last_printed_time_spent = 0
                 while thread.is_alive():
                     time_spent = time.time() - time_start
                     if time_spent < time_per_iteration:
                         time.sleep(1)
-                        logger.info(f"Time spent in current iteration: {time_spent} s.")
+                        if time_spent - last_printed_time_spent > 30:          # print approximately every 30 s
+                            logger.info(f"Time spent in current iteration: {time_spent} s.")
+                            last_printed_time_spent = time_spent
                     else:
                         break
                     if global_timeout():
