@@ -292,7 +292,7 @@ def calculate_trafos(
                     ip_results = ip_solver.solve(
                         model,
                         tee=not quiet,
-                        timelimit=None,
+                        timelimit=7200,
                         report_timing=True,
                         **solve_params,
                     )
