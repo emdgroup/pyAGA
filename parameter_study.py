@@ -1,7 +1,10 @@
 import ast
 import configparser
+import itertools
 import logging
+import os
 import platform
+import shutil
 
 import sys
 import threading
@@ -12,6 +15,7 @@ from typing import List, Callable, Tuple
 
 import numpy as np
 import pandas as pd
+from colorama import Fore, Style
 from sympy.combinatorics import PermutationGroup, Permutation
 
 import local_import_paths
@@ -232,16 +236,10 @@ def try_bandwidths_and_tolerance_ratios(
                         current_percentage,
                         kde_bandwidth,
                         trafo_fault_tolerance_ratio,
-                        trafo_round_decimals
-                        if trafo_round_decimals is not None
-                        else "None",
                         error_value_limit,
                         "Timeout",
                         "Timeout",
-                        "Timeout",
-                        "Timeout",
-                        "Timeout",
-                        "Timeout",
+                        expected_permutation_group_order[study_name],
                         "Timeout",
                         round(time.time() - time_start, 2),
                     )
@@ -258,21 +256,21 @@ def try_bandwidths_and_tolerance_ratios(
                     ) = num_generators_contained(
                         trafos, norm, adjacency_matrix, error_value_limit
                     )
+                    if expected_permutation_group_order[study_name] < group_order:
+                        is_group_order_correct = "too few"
+                    elif expected_permutation_group_order[study_name] == group_order:
+                        is_group_order_correct = "exact"
+                    else:
+                        is_group_order_correct = "too many"
                     parameters = (
                         current_percentage,
                         kde_bandwidth,
                         trafo_fault_tolerance_ratio,
-                        trafo_round_decimals
-                        if trafo_round_decimals is not None
-                        else "None",
                         error_value_limit,
-                        len(trafos),
-                        average_matchrate_per_trafo,
-                        num_generators,
                         all_fundamentals_contained,
                         group_order,
-                        number_of_MIP_calls.valid[0],
-                        number_of_MIP_calls.invalid[0],
+                        expected_permutation_group_order[study_name],
+                        is_group_order_correct,
                         round(time.time() - time_start, 2),
                     )
                     assert len(parameters) == num_columns
@@ -288,6 +286,8 @@ def try_bandwidths_and_tolerance_ratios(
                         f"num_generators = {num_generators},  "
                         f"all_fundamentals_contained = {all_fundamentals_contained},  "
                         f"group_order = {group_order},  "
+                        f"expected_group_order = {expected_permutation_group_order[study_name]},  "
+                        f"is_group_order_correct = {is_group_order_correct},  "
                         f"number_of_MIP_calls.valid = {number_of_MIP_calls.valid[0]},   "
                         f"number_of_MIP_calls.invalid = "
                         f"{number_of_MIP_calls.invalid[0]},   "
@@ -300,16 +300,10 @@ def try_bandwidths_and_tolerance_ratios(
                     current_percentage,
                     kde_bandwidth,
                     trafo_fault_tolerance_ratio,
-                    trafo_round_decimals
-                    if trafo_round_decimals is not None
-                    else "None",
                     error_value_limit,
                     "skipped",
                     "skipped",
-                    "skipped",
-                    "skipped",
-                    "skipped",
-                    "skipped",
+                    expected_permutation_group_order[study_name],
                     "skipped",
                     "skipped",
                 )
@@ -319,8 +313,11 @@ def try_bandwidths_and_tolerance_ratios(
                     f"kde_bandwidth = {round(kde_bandwidth, 12)},  "
                     f"trafo_fault_tolerance_ratio = {trafo_fault_tolerance_ratio},  "
                     f"error_value_limit = {error_value_limit},  "
-                    f"num_found_trafos = skipped,  "
-                    f"average_matchrate_per_trafo = skipped,  "
+                    f"all_fundamentals_contained = skipped,  "
+                    f"group_order = skipped,  "
+                    f"expected_group_order = {expected_permutation_group_order[study_name]},  "
+                    f"is_group_order_correct = skipped,  "
+                    f"time = skipped,  "
                 )
             parameter_study_results.append(parameters)
 
@@ -445,7 +442,7 @@ def num_generators_contained(
         assert num_horizontal_pixels == num_vertical_pixels
         rotation_without_colors = (
             np.roll(
-                np.arange(0, num_horizontal_pixels ** 2).reshape(
+                np.arange(0, num_horizontal_pixels**2).reshape(
                     num_horizontal_pixels, num_horizontal_pixels
                 ),
                 shift=-1,
@@ -506,7 +503,13 @@ def num_generators_contained(
 
 
 if __name__ == "__main__":
-    num_columns = 13
+    num_columns = 9
+    expected_permutation_group_order = {
+        "20x10": 400,  # 20*10*2
+        "15x15_rotations": 900,  # 15*15*4
+        "no_axsym_15x15_rotations": 900,
+        "13x7_letters_indiv_colors": 1092,  # 13*7*6*2
+    }
     logging.basicConfig(
         format="%(asctime)s [%(levelname)s] %(message)s",
         handlers=[logging.StreamHandler(sys.stdout)],
@@ -518,12 +521,44 @@ if __name__ == "__main__":
     except IndexError:
         logger.error("Please provide name of testcase")
         sys.exit(1)
+    job_array_id = (
+        None  # if this is not None, then this current job is part of a job array
+    )
+    job_id_index = (
+        None  # if this is not None, then this current job is part of a job array
+    )
+    try:
+        job_array_id = int(sys.argv[2])
+        job_id_index = int(sys.argv[3])
+    except IndexError:
+        pass
+    except ValueError as e:
+        logger.error(e)
+        logger.error(
+            "Failed to convert command line arguments to job_array_id and job_id_index."
+        )
+        sys.exit(1)
+    if job_array_id is not None:
+        assert job_id_index is not None
+        jobarray_foldername = f"jobarray_{job_array_id}"
+        try:
+            os.makedirs(f"parameter_study/results/{jobarray_foldername}")
+        except FileExistsError as e:
+            logger.error(e)
+            logger.error(
+                "Tried creating a folder for a job array id which already exists. This can't happen on the cluster and"
+                " is therefore disallowed."
+            )
+            sys.exit(1)
+        filename_xlsx = f"parameter_study/results/{jobarray_foldername}/{study_name}_results_{uuid.uuid4()}.xlsx"
     filename_xlsx = f"parameter_study/results/{study_name}_results_{uuid.uuid4()}.xlsx"
     logger.info(f"Results table will be written to {filename_xlsx}")
     # config.read(f"parameter_study/parameter_study_{study_name}.ini")
     config_name = f"parameter_study/parameter_study_{study_name}.ini"
-    with open(config_name, "r") as file:
-        print(file.read())
+    with open(config_name, "r") as ini_file:
+        print(ini_file.read())
+    if job_array_id is not None:
+        shutil.copy(config_name, f"parameter_study/results/{jobarray_foldername}/parameter_study_{study_name}.ini")
     config.read(config_name)
     params = config._sections
 
@@ -584,7 +619,27 @@ if __name__ == "__main__":
                     lambda: global_stop_thread,
                 ),
             )
-
+        if job_array_id is not None:
+            # If script is part of job array, calculate the corresponding element of the cartesian product of parameters
+            # and use it as the parameters instead.
+            cartesian_product = tuple(
+                itertools.product(
+                    parameters_parsed["error_value_limits"],
+                    parameters_parsed["percentages"],
+                    parameters_parsed["kde_bandwidths"],
+                    parameters_parsed["fault_tolerance_ratios"],
+                )
+            )
+            product_element = cartesian_product[job_id_index]
+            logger.debug(f"{Fore.RED}job_array_id: {job_array_id}{Style.RESET_ALL}")
+            logger.debug(f"{Fore.RED}job_id_index: {job_id_index}{Style.RESET_ALL}")
+            logger.debug(f"{Fore.RED}Element of cartesian product: {product_element}{Style.RESET_ALL}")
+            (
+                parameters_parsed["error_value_limits"],
+                parameters_parsed["percentages"],
+                parameters_parsed["kde_bandwidths"],
+                parameters_parsed["fault_tolerance_ratios"],
+            ) = map(lambda x: (x,), product_element)
         time_start = time.time()
         thread.start()
         # Wait until the timeout value has been reached (timeout value is given
@@ -609,15 +664,11 @@ if __name__ == "__main__":
         "percentage_observation",
         "kde_bandwidth",
         "trafo_fault_tolerance_ratio",
-        "trafo_round_decimals",
         "error_value_limit",
-        "num_found_trafos",
-        "average_matchrate_per_trafo",
-        "num_generators",
         "fundamental_generators_contained",
         "permutation_group_order",
-        "number_of_MIP_calls.valid",
-        "number_of_MIP_calls.invalid",
+        "expected_permutation_group_order",
+        "is_group_order_correct",
         "time for calculation",
     ]
     assert len(columns) == num_columns
