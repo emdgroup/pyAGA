@@ -554,7 +554,8 @@ if __name__ == "__main__":
             )
             sys.exit(1)
         filename_xlsx = f"parameter_study/results/{jobarray_foldername}/{study_name}_results_{uuid.uuid4()}.xlsx"
-    filename_xlsx = f"parameter_study/results/{study_name}_results_{uuid.uuid4()}.xlsx"
+    else:
+        filename_xlsx = f"parameter_study/results/{study_name}_results_{uuid.uuid4()}.xlsx"
     logger.info(f"Results table will be written to {filename_xlsx}")
     # config.read(f"parameter_study/parameter_study_{study_name}.ini")
     config_name = f"parameter_study/parameter_study_{study_name}.ini"
