@@ -545,15 +545,16 @@ if __name__ == "__main__":
     if job_array_id is not None:
         assert job_id_index is not None
         jobarray_foldername = f"jobarray_{job_array_id}"
-        try:
-            os.makedirs(f"parameter_study/results/{jobarray_foldername}")
-        except FileExistsError as e:
-            logger.error(e)
-            logger.error(
-                "Tried creating a folder for a job array id which already exists. This can't happen on the cluster and"
-                " is therefore disallowed."
-            )
-            sys.exit(1)
+        if job_id_index == 0:
+            try:
+                os.makedirs(f"parameter_study/results/{jobarray_foldername}")
+            except FileExistsError as e:
+                logger.error(e)
+                logger.error(
+                    "Tried creating a folder for a job array id which already exists. This can't happen on the cluster and"
+                    " is therefore disallowed."
+                )
+                sys.exit(1)
         filename_xlsx = f"parameter_study/results/{jobarray_foldername}/{study_name}_results_{uuid.uuid4()}.xlsx"
     else:
         filename_xlsx = f"parameter_study/results/{study_name}_results_{uuid.uuid4()}.xlsx"
