@@ -563,7 +563,7 @@ if __name__ == "__main__":
     config_name = f"parameter_study/parameter_study_{study_name}.ini"
     with open(config_name, "r") as ini_file:
         print(ini_file.read())
-    if job_array_id is not None:
+    if job_array_id is not None and job_array_id == 0:
         shutil.copy(config_name, f"parameter_study/results/{jobarray_foldername}/parameter_study_{study_name}.ini")
     config.read(config_name)
     params = config._sections
