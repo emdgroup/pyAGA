@@ -261,11 +261,11 @@ def try_bandwidths_and_tolerance_ratios(
                         trafos, norm, adjacency_matrix, error_value_limit
                     )
                     if expected_permutation_group_order[study_name] < group_order:
-                        is_group_order_correct = "too few"
+                        is_group_order_correct = "too many"
                     elif expected_permutation_group_order[study_name] == group_order:
                         is_group_order_correct = "exact"
                     else:
-                        is_group_order_correct = "too many"
+                        is_group_order_correct = "too few"
                     parameters = (
                         current_percentage,
                         kde_bandwidth,
