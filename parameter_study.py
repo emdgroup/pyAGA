@@ -1,5 +1,6 @@
 import ast
 import configparser
+import datetime
 import itertools
 import logging
 import os
@@ -634,7 +635,22 @@ if __name__ == "__main__":
                     parameters_parsed["fault_tolerance_ratios"],
                 )
             )
+            if job_id_index == 0:
+                for element in cartesian_product:
+                    with open(f"parameter_study/results/{jobarray_foldername}/status_todo_{uuid.uuid4()}",
+                              "w") as file:
+                        file.write(datetime.datetime.now().isoformat() + "\n")
+                        file.write(str(time.time()) + "\n")
+                        file.write(str(element) + "\n")
+                        file.write("status: TODO\n")
+
             product_element = cartesian_product[job_id_index]
+            with open(f"parameter_study/results/{jobarray_foldername}/status_started_{uuid.uuid4()}", "w") as file:
+                file.write(datetime.datetime.now().isoformat() + "\n")
+                file.write(str(time.time()) + "\n")
+                file.write(str(product_element) + "\n")
+                file.write("status: started\n")
+
             logger.debug(f"{Fore.RED}job_array_id: {job_array_id}{Style.RESET_ALL}")
             logger.debug(f"{Fore.RED}job_id_index: {job_id_index}{Style.RESET_ALL}")
             logger.debug(f"{Fore.RED}Element of cartesian product: {product_element}{Style.RESET_ALL}")
@@ -678,3 +694,11 @@ if __name__ == "__main__":
     assert len(columns) == num_columns
     results_dataframe = pd.DataFrame(parameter_study_results, columns=columns)
     results_dataframe.to_excel(filename_xlsx, engine="xlsxwriter")
+
+    if job_array_id is not None:
+        with open(f"parameter_study/results/{jobarray_foldername}/status_finished_{uuid.uuid4()}", "w") as file:
+            file.write(datetime.datetime.now().isoformat() + "\n")
+            file.write(str(time.time()) + "\n")
+            file.write(str(product_element) + "\n")
+            file.write("status: finished\n")
+            file.write(f"result: {parameter_study_results[0][7]}\n")
