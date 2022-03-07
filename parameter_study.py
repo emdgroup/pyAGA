@@ -534,18 +534,19 @@ if __name__ == "__main__":
     try:
         job_array_id = int(sys.argv[2])
         job_id_index = int(sys.argv[3])
+        array_task_min = int(sys.argv[4])
     except IndexError:
         pass
     except ValueError as e:
         logger.error(e)
         logger.error(
-            "Failed to convert command line arguments to job_array_id and job_id_index."
+            "Failed to convert command line arguments to job_array_id, job_id_index and array_task_min."
         )
         sys.exit(1)
     if job_array_id is not None:
         assert job_id_index is not None
         jobarray_foldername = f"jobarray_{job_array_id}"
-        if job_id_index == 0:
+        if job_id_index == array_task_min:
             try:
                 os.makedirs(f"parameter_study/results/{jobarray_foldername}")
             except FileExistsError as e:
@@ -563,7 +564,7 @@ if __name__ == "__main__":
     config_name = f"parameter_study/parameter_study_{study_name}.ini"
     with open(config_name, "r") as ini_file:
         print(ini_file.read())
-    if job_array_id is not None and job_array_id == 0:
+    if job_array_id is not None and job_array_id == array_task_min:
         shutil.copy(config_name, f"parameter_study/results/{jobarray_foldername}/parameter_study_{study_name}.ini")
     config.read(config_name)
     params = config._sections
@@ -636,7 +637,7 @@ if __name__ == "__main__":
                     parameters_parsed["fault_tolerance_ratios"],
                 )
             )
-            if job_id_index == 0:
+            if job_id_index == array_task_min:
                 for element in cartesian_product:
                     with open(f"parameter_study/results/{jobarray_foldername}/status_todo_{uuid.uuid4()}",
                               "w") as file:
@@ -702,4 +703,7 @@ if __name__ == "__main__":
             file.write(str(time.time()) + "\n")
             file.write(str(product_element) + "\n")
             file.write("status: finished\n")
-            file.write(f"result: {parameter_study_results[0][7]}\n")
+            try:
+                file.write(f"result: {parameter_study_results[0][7]}\n")
+            except IndexError:
+                file.write(f"result: MIP Timeout without admissible solution")
