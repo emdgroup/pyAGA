@@ -65,7 +65,7 @@ def find_trafos(
         adjacency_matrix,
         bandwidth=bandwidth,
         plot=logger.level == logging.DEBUG
-        and threading.currentThread() is threading.main_thread(),
+        and threading.current_thread() is threading.main_thread(),
     )
     labels = np.digitize(adjacency_matrix, bins=bins)
     unique_values, _ = np.unique(labels, return_counts=True)
@@ -79,7 +79,6 @@ def find_trafos(
     # adjacency matrix
     possible_mappings = [set(range(n))] * n
     # this is where the algorithm starts
-    matching_rates = []
     trafos = []
     # Quick and dirty way to implement mutable python ints. Yeah, I know.
     number_of_MIP_calls = SimpleNamespace(valid=[0], invalid=[0])
@@ -89,7 +88,6 @@ def find_trafos(
         possible_mappings,
         quiet,
         fault_tolerance,
-        matching_rates,
         casename,
         norm,
         error_value_limit,
@@ -98,27 +96,14 @@ def find_trafos(
         trafos,
         stop_thread,
     )
-    if stop_thread is not None and stop_thread():
-        return [None, None, None]
-    else:
-        return trafos, sum(matching_rates) / len(matching_rates), number_of_MIP_calls
+
+    return trafos, number_of_MIP_calls
 
 
-def calculate_trafos(
-    adjacency_matrix: np.ndarray,
-    equivalency_classes: List[List[np.ndarray]],
-    possible_mappings: List[Set],
-    quiet: bool,
-    fault_tolerance: int,
-    matching_rates: List[float],
-    casename: str,
-    norm: Norm,
-    error_value_limit,
-    use_integer_programming: bool,
-    number_of_MIP_calls: List[int],
-    result: List[List[Union[int, None]]],
-    stop_thread,
-) -> None:
+def calculate_trafos(adjacency_matrix: np.ndarray, equivalency_classes: List[List[np.ndarray]],
+                     possible_mappings: List[Set], quiet: bool, fault_tolerance: int, casename: str, norm: Norm,
+                     error_value_limit, use_integer_programming: bool, number_of_MIP_calls: List[int],
+                     result: List[List[Union[int, None]]], stop_thread) -> None:
     """Calculate the transformations with the given possible mappings. This function
     is called recursively, until all sets in the possible mappings have at most one
     entry.
@@ -131,7 +116,6 @@ def calculate_trafos(
     each position.
     :param quiet: Whether to print debugging information to the terminal.
     :param fault_tolerance: The number of tolerated unmappable nodes.
-    :param matching_rates: The list containing the matchrates of the found
     :param casename: The name of the testcase.
     :param norm: The norm used to calculate the deviation value (the error term).
     :param error_value_limit:
@@ -180,21 +164,8 @@ def calculate_trafos(
                     'self-concurrences have fallen into the same bin.'
                 )
                 assert False
-            calculate_trafos(
-                adjacency_matrix,
-                equivalency_classes,
-                new_poss,
-                quiet,
-                fault_tolerance,
-                matching_rates,
-                casename,
-                norm,
-                error_value_limit,
-                use_integer_programming,
-                number_of_MIP_calls,
-                result,
-                stop_thread,
-            )
+            calculate_trafos(adjacency_matrix, equivalency_classes, new_poss, quiet, fault_tolerance, casename, norm,
+                             error_value_limit, use_integer_programming, number_of_MIP_calls, result, stop_thread)
     else:
         # Check if possible_mappings contains identical single_element entries
         perfectly_matched = [list(mapping)[0] for mapping in possible_mappings if len(mapping) == 1]
@@ -219,7 +190,6 @@ def calculate_trafos(
                 for perm in all_group_elements:
                     if perm not in result:
                         result.append(perm)
-                matching_rates.append(1)
                 if logger.level <= logging.INFO:
                     print_permutation(
                         f'Permutation number {len(result)} matched all nodes.',
@@ -239,7 +209,6 @@ def calculate_trafos(
             # nodes either have exactly one match target or cannot be matched at all
 
             permutation = [s.pop() if len(s) > 0 else None for s in possible_mappings]
-            matching_rate = number_of_matches['perfect'] / len(possible_mappings)
 
             logger.info(
                 f'Incomplete permutation number {len(result)} matched '
@@ -343,8 +312,6 @@ def calculate_trafos(
                             f'higher than the limit of {error_value_limit}.'
                         )
 
-                    matching_rate = 1
-
                 except RuntimeError:
                     logger.warning(f'No solution found for {permutation}')
                     logger.warning('Solver Result:\n' + str(ip_results))
@@ -352,7 +319,6 @@ def calculate_trafos(
             else:
                 result.append(permutation)
 
-            matching_rates.append(matching_rate)
             logger.debug('\n' + matshow(to_matrix(permutation)))
 
 

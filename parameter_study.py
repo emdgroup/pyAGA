@@ -129,7 +129,7 @@ def find_trafos_wrapper(
     :param stop_thread: This function passes along a lambda callback to tell this
     thread to terminate.
     """
-    trafos, average_matchrate_per_trafo, number_of_MIP_calls = find_trafos(
+    trafos, number_of_MIP_calls = find_trafos(
         correlation_matrix,
         fault_tolerance=fault_tolerance,
         round_decimals=trafo_round_decimals,
@@ -142,8 +142,7 @@ def find_trafos_wrapper(
         stop_thread=stop_thread,
     )
     result[0] = trafos
-    result[1] = average_matchrate_per_trafo
-    result[2] = number_of_MIP_calls
+    result[1] = number_of_MIP_calls
 
 
 def try_bandwidths_and_tolerance_ratios(
@@ -183,8 +182,8 @@ def try_bandwidths_and_tolerance_ratios(
     graph symmetry in order for it to be included in the permutation group.
     :param parameter_study_results: A list of tuples containing the result of the
     excel sheet. The individual tuples correspond to rows within the excel sheet.
-    :param time_per_iteration: The time each individual transformation-finding run (
-    including the integer program, if it is enabled)
+    :param time_per_iteration: The time in seconds each individual transformation-finding run (
+    including the integer program, if it is enabled) has before it reaches a timeout state.
     :param global_timeout:
     :return:
     """
@@ -192,7 +191,7 @@ def try_bandwidths_and_tolerance_ratios(
     for kde_bandwidth in kde_bandwidths:
         for trafo_fault_tolerance_ratio in fault_tolerance_ratios:
             if not timed_out:
-                results = [None] * 3
+                results = [None] * 2
                 stop_thread = False
                 num_variables = adjacency_matrix.shape[0]
                 thread = threading.Thread(
@@ -252,7 +251,7 @@ def try_bandwidths_and_tolerance_ratios(
                     while thread.is_alive():
                         time.sleep(0.5)
                 else:
-                    trafos, average_matchrate_per_trafo, number_of_MIP_calls = results
+                    trafos, number_of_MIP_calls = results
                     (
                         num_generators,
                         all_fundamentals_contained,
@@ -285,8 +284,6 @@ def try_bandwidths_and_tolerance_ratios(
                         f"trafo_round_decimals = {trafo_round_decimals},   "
                         f"error_value_limit = {error_value_limit},  "
                         f"num_found_trafos = {len(trafos)},  "
-                        f"average_matchrate_per_trafo = "
-                        f"{average_matchrate_per_trafo},  "
                         f"num_generators = {num_generators},  "
                         f"all_fundamentals_contained = {all_fundamentals_contained},  "
                         f"group_order = {group_order},  "
