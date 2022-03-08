@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from mipsym.mip import Norm
 
 
-def calculate_error_values(testcase):
+def calculate_error_values(testcase, percentages):
     perfect_data_filename = f"../data/{testcase}_concurrence_matrix_100.pickle"
     with open(perfect_data_filename, "rb") as file:
         perfect_data: np.ndarray = pickle.load(file)
@@ -17,8 +17,12 @@ def calculate_error_values(testcase):
         error_values_norm = []
         for percentage in percentages:
             matrix_filename = f"../data/{testcase}_concurrence_matrix_{percentage}.pickle"
-            with open(matrix_filename, "rb") as file:
-                matrix: np.ndarray = pickle.load(file)
+            try:
+                with open(matrix_filename, "rb") as file:
+                    matrix: np.ndarray = pickle.load(file)
+            except FileNotFoundError:
+                print(f"Testcase {testcase} does not have percentage {percentage}.")
+                continue
             if norm == Norm.L_INFINITY:
                 error = np.max(np.abs(matrix - perfect_data))
                 color = "red"
@@ -33,25 +37,28 @@ def calculate_error_values(testcase):
         error_values[norm] = error_values_norm
     return error_values
 
+def main(testcases, percentages):
+    error_values = {}
+    for i in range(4):
+        error_values[testcases[i]] = calculate_error_values(testcases[i], percentages)
+    return error_values
 
 
 if __name__ == "__main__":
-    fig, axes = plt.subplots(nrows=4, figsize=(10, 20))
-    percentages = ["100", "99.9", "98.0", "95.0", "90.0", "85.0", "80.0", "75.0", "70.0", "65.0", "60.0", "55.0",
+    percentages = ["100", "99.9", "99.0", "98.0", "95.0", "90.0", "85.0", "80.0", "75.0", "70.0", "65.0", "60.0", "55.0",
                    "50.0", "40.0", "30.0", "20.0", "10.0", "5.0"]
     testcases = ["two_letter_words_20x10", "two_letter_words_15x15_rotations",
                  "two_letter_words_no_axsym_15x15_rotations",
                  "two_letter_words_no_axsym_13x7_letters_indiv_colors"]
-
-    error_values = {}
-    for i in range(4):
-        error_values[testcases[i]] = calculate_error_values(testcases[i])
+    error_values = main(testcases, percentages)
+    fig, axes = plt.subplots(nrows=4, figsize=(10, 20))
 
     for i, testcase in enumerate(testcases):
         ax = axes[i]
         ax.set_title(testcase)
         ax.set_xlabel("percentages")
         ax.set_ylabel("error values (scaled)")
+        ax.set_yscale("log")
         for norm in Norm:
             graph = np.array(error_values[testcase][norm]).astype(float)
             if norm == Norm.L_1:
