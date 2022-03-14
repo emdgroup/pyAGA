@@ -219,8 +219,12 @@ def try_bandwidths_and_tolerance_ratios(
                     time_spent = time.time() - time_start
                     if time_spent < time_per_iteration:
                         time.sleep(1)
-                        if time_spent - last_printed_time_spent > 30:          # print approximately every 30 s
-                            logger.info(f"Time spent in current iteration: {time_spent} s.")
+                        if (
+                            time_spent - last_printed_time_spent > 30
+                        ):  # print approximately every 30 s
+                            logger.info(
+                                f"Time spent in current iteration: {time_spent} s."
+                            )
                             last_printed_time_spent = time_spent
                     else:
                         break
@@ -235,65 +239,65 @@ def try_bandwidths_and_tolerance_ratios(
                     # bandwidths (as we assume an ordered list) will time out as well.
                     # Set this flag in order to skip them.
                     timed_out = True
-                    parameters = (
-                        current_percentage,
-                        kde_bandwidth,
-                        trafo_fault_tolerance_ratio,
-                        error_value_limit,
-                        "Timeout",
-                        "Timeout",
-                        expected_permutation_group_order[study_name],
-                        "Timeout",
-                        round(time.time() - time_start, 2),
-                    )
-
                     stop_thread = True
                     while thread.is_alive():
                         time.sleep(0.5)
+
+                trafos, number_of_MIP_calls = results
+                (
+                    num_generators,
+                    all_fundamentals_contained,
+                    group_order,
+                ) = num_generators_contained(
+                    trafos, norm, adjacency_matrix, error_value_limit
+                )
+                if expected_permutation_group_order[study_name] < group_order:
+                    is_group_order_correct = "too many"
+                elif expected_permutation_group_order[study_name] == group_order:
+                    is_group_order_correct = (
+                        "exact" if not timed_out else "exact (Timeout)"
+                    )
                 else:
-                    trafos, number_of_MIP_calls = results
+                    is_group_order_correct = (
+                        "too few" if not timed_out else "too few (Timeout)"
+                    )
+
+                parameters = (
+                    current_percentage,
+                    kde_bandwidth,
+                    trafo_fault_tolerance_ratio,
+                    error_value_limit,
+                    all_fundamentals_contained,
+                    group_order,
+                    expected_permutation_group_order[study_name],
+                    is_group_order_correct,
+                    round(time.time() - time_start, 2)
+                    if not timed_out
+                    else f">= {round(time.time() - time_start, 2)} (Timeout)",
+                )
+                assert len(parameters) == num_columns
+                logger.info(
+                    f"percentage_observations = {current_percentage},  "
+                    f"kde_bandwidth = {round(kde_bandwidth, 12)},  "
+                    f"trafo_fault_tolerance_ratio = {trafo_fault_tolerance_ratio},  "
+                    f"trafo_round_decimals = {trafo_round_decimals},   "
+                    f"error_value_limit = {error_value_limit},  "
+                    f"num_found_trafos = {len(trafos)},  "
+                    f"num_generators = {num_generators},  "
+                    f"all_fundamentals_contained = {all_fundamentals_contained},  "
+                    f"group_order = {group_order},  "
+                    f"expected_group_order = {expected_permutation_group_order[study_name]},  "
+                    f"is_group_order_correct = {is_group_order_correct},  "
+                    f"number_of_MIP_calls.valid = {number_of_MIP_calls.valid[0]},   "
+                    f"number_of_MIP_calls.invalid = "
+                    f"{number_of_MIP_calls.invalid[0]},   "
+                    +
                     (
-                        num_generators,
-                        all_fundamentals_contained,
-                        group_order,
-                    ) = num_generators_contained(
-                        trafos, norm, adjacency_matrix, error_value_limit
+                        f"time = {round(time.time() - time_start, 2)} s   "
+                        if not timed_out else
+                        f"time >= {round(time.time() - time_start, 2)} s (Timeout)  "
                     )
-                    if expected_permutation_group_order[study_name] < group_order:
-                        is_group_order_correct = "too many"
-                    elif expected_permutation_group_order[study_name] == group_order:
-                        is_group_order_correct = "exact"
-                    else:
-                        is_group_order_correct = "too few"
-                    parameters = (
-                        current_percentage,
-                        kde_bandwidth,
-                        trafo_fault_tolerance_ratio,
-                        error_value_limit,
-                        all_fundamentals_contained,
-                        group_order,
-                        expected_permutation_group_order[study_name],
-                        is_group_order_correct,
-                        round(time.time() - time_start, 2),
-                    )
-                    assert len(parameters) == num_columns
-                    logger.info(
-                        f"percentage_observations = {current_percentage},  "
-                        f"kde_bandwidth = {round(kde_bandwidth, 12)},  "
-                        f"trafo_fault_tolerance_ratio = {trafo_fault_tolerance_ratio},  "
-                        f"trafo_round_decimals = {trafo_round_decimals},   "
-                        f"error_value_limit = {error_value_limit},  "
-                        f"num_found_trafos = {len(trafos)},  "
-                        f"num_generators = {num_generators},  "
-                        f"all_fundamentals_contained = {all_fundamentals_contained},  "
-                        f"group_order = {group_order},  "
-                        f"expected_group_order = {expected_permutation_group_order[study_name]},  "
-                        f"is_group_order_correct = {is_group_order_correct},  "
-                        f"number_of_MIP_calls.valid = {number_of_MIP_calls.valid[0]},   "
-                        f"number_of_MIP_calls.invalid = "
-                        f"{number_of_MIP_calls.invalid[0]},   "
-                        f"time = {round(time.time() - time_start, 2)} s"
-                    )
+                )
             else:
                 # As a previous, smaller bandwidth already timed out, we can safely skip
                 # this iteration.
@@ -555,14 +559,19 @@ if __name__ == "__main__":
                 sys.exit(1)
         filename_xlsx = f"parameter_study/results/{jobarray_foldername}/{study_name}_results_{uuid.uuid4()}.xlsx"
     else:
-        filename_xlsx = f"parameter_study/results/{study_name}_results_{uuid.uuid4()}.xlsx"
+        filename_xlsx = (
+            f"parameter_study/results/{study_name}_results_{uuid.uuid4()}.xlsx"
+        )
     logger.info(f"Results table will be written to {filename_xlsx}")
     # config.read(f"parameter_study/parameter_study_{study_name}.ini")
     config_name = f"parameter_study/parameter_study_{study_name}.ini"
     with open(config_name, "r") as ini_file:
         print(ini_file.read())
     if job_array_id is not None and job_array_id == array_task_min:
-        shutil.copy(config_name, f"parameter_study/results/{jobarray_foldername}/parameter_study_{study_name}.ini")
+        shutil.copy(
+            config_name,
+            f"parameter_study/results/{jobarray_foldername}/parameter_study_{study_name}.ini",
+        )
     config.read(config_name)
     params = config._sections
 
@@ -636,15 +645,20 @@ if __name__ == "__main__":
             )
             if job_id_index == array_task_min:
                 for element in cartesian_product:
-                    with open(f"parameter_study/results/{jobarray_foldername}/status_todo_{uuid.uuid4()}",
-                              "w") as file:
+                    with open(
+                        f"parameter_study/results/{jobarray_foldername}/status_todo_{uuid.uuid4()}",
+                        "w",
+                    ) as file:
                         file.write(datetime.datetime.now().isoformat() + "\n")
                         file.write(str(time.time()) + "\n")
                         file.write(str(element) + "\n")
                         file.write("status: TODO\n")
 
             product_element = cartesian_product[job_id_index]
-            with open(f"parameter_study/results/{jobarray_foldername}/status_started_{uuid.uuid4()}", "w") as file:
+            with open(
+                f"parameter_study/results/{jobarray_foldername}/status_started_{uuid.uuid4()}",
+                "w",
+            ) as file:
                 file.write(datetime.datetime.now().isoformat() + "\n")
                 file.write(str(time.time()) + "\n")
                 file.write(str(product_element) + "\n")
@@ -652,7 +666,9 @@ if __name__ == "__main__":
 
             logger.debug(f"{Fore.RED}job_array_id: {job_array_id}{Style.RESET_ALL}")
             logger.debug(f"{Fore.RED}job_id_index: {job_id_index}{Style.RESET_ALL}")
-            logger.debug(f"{Fore.RED}Element of cartesian product: {product_element}{Style.RESET_ALL}")
+            logger.debug(
+                f"{Fore.RED}Element of cartesian product: {product_element}{Style.RESET_ALL}"
+            )
             (
                 parameters_parsed["error_value_limits"],
                 parameters_parsed["percentages"],
@@ -695,7 +711,10 @@ if __name__ == "__main__":
     results_dataframe.to_excel(filename_xlsx, engine="xlsxwriter")
 
     if job_array_id is not None:
-        with open(f"parameter_study/results/{jobarray_foldername}/status_finished_{uuid.uuid4()}", "w") as file:
+        with open(
+            f"parameter_study/results/{jobarray_foldername}/status_finished_{uuid.uuid4()}",
+            "w",
+        ) as file:
             file.write(datetime.datetime.now().isoformat() + "\n")
             file.write(str(time.time()) + "\n")
             file.write(str(product_element) + "\n")
