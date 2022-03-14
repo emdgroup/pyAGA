@@ -19,8 +19,8 @@ if __name__ == "__main__":
     }
     df_20x10 = pd.read_excel("data/20x10_summary_everything.xlsx")
     df_15x15 = pd.read_excel("data/15x15_rotations_summary_everything.xlsx")
-    df_no_axsym15x15 = pd.read_excel("data/15x15_rotations_summary_everything.xlsx")
-    dataframes = [df_20x10, df_15x15, df_no_axsym15x15]
+    df_no_axsym_15x15 = pd.read_excel("data/no_axsym_15x15_rotations_summary_everything.xlsx")
+    dataframes = [df_20x10, df_15x15, df_no_axsym_15x15]
     error_values = matrices_error_values.main(testcases, percentages)
 
     for index, testcase in enumerate(testcases[:3]):
