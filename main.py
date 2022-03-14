@@ -1,112 +1,24 @@
-from pattern_finder import *
-from transformation_finder import find_trafos
-from verify_transformations import verify_transformations
-import copy
 import pickle
+import logging
 
-world_name = "two_letter_words_20x10"
-# world_name = "one_letter_words_10x5"
-percentage = "98.0"
-integer_matrices = False
-# world_name = "one_letter_words_10x5"
-trafo_num_bins = 26
-trafo_round_decimals = 4
-trafo_fault_tolerance_ratio = 0.25
-kde_bandwidth = 1e-3
-pattern_size = 2
-level_bound = 5
+from mipsym.mip import find_permutations, Norm, Solver
 
-try:
-    with open("trafos_" + world_name + ".pickle", "rb") as trafos_file:
-        trafos = pickle.load(trafos_file)
-except (FileNotFoundError, EOFError):
-    try:
-        if integer_matrices:
-            mat_filename = (
-                f"data/{world_name}_integers_concurrence_matrix_{percentage}.pickle"
-            )
-        else:
-            mat_filename = f"data/{world_name}_concurrence_matrix_{percentage}.pickle"
-        with open(mat_filename, "rb") as correlation_matrix_file:
-            print(f"Loading matrix {mat_filename}")
-            with open("trafos_" + world_name + ".pickle", "wb") as trafos_file:
-                correlation_matrix = np.transpose(pickle.load(correlation_matrix_file))
-                # trafos = find_trafos(correlation_matrix, trafo_accuracy)
-                num_variables = correlation_matrix.shape[0]
-                trafos, average_matchrate_per_trafo = find_trafos(
-                    correlation_matrix,
-                    fault_tolerance=int(trafo_fault_tolerance_ratio * num_variables),
-                    round_decimals=trafo_round_decimals,
-                    quiet=False,
-                    bandwidth=kde_bandwidth,
-                    casename=world_name,
-                    use_integer_programming=False,
-                )
-                num_valid_trafos = verify_transformations(trafos, world_name)
+logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s')
+logger = logging.getLogger('integer_programming')
+logger.setLevel(level=logging.INFO)  # set to logging.INFO for less, to logging.DEBUG for more verbosity
 
-                print(f"num_valid_trafos = {num_valid_trafos}")
-                # pickle.dump(trafos, trafos_file)
-    except FileNotFoundError:
-        print(
-            "Please provide file correlation_matrix_"
-            + world_name
-            + ".pickle or trafos_"
-            + world_name
-            + ".pickle!"
-        )
-        exit(-1)
 
-exit(0)
-try:
-    with open(
-        "unique_observations_mod_trafos_" + world_name + ".pickle", "rb"
-    ) as observations_mod_trafos_file:
-        original_observations = pickle.load(observations_mod_trafos_file)
-except FileNotFoundError:
-    try:
-        with open(
-            "unique_observations_" + world_name + ".pickle", "rb"
-        ) as observations_file:
-            with open(
-                "unique_observations_mod_trafos_" + world_name + ".pickle", "wb"
-            ) as observations_mod_trafos_file:
-                observations = np.transpose(pickle.load(observations_file))
-                original_observations = find_observation_representatives(
-                    set([tuple(o) for o in observations]), trafos
-                )
-                pickle.dump(original_observations, observations_mod_trafos_file)
-    except FileNotFoundError:
-        print(
-            "Please provide file unique_observations_"
-            + world_name
-            + ".pickle or unique_observations_mod_trafos_"
-            + world_name
-            + ".pickle!"
-        )
-        exit(-1)
+if __name__ == '__main__':
+    filename = 'data/one_letter_words_5x5_integers_concurrence_matrix_100.pickle'
+    logger.info(f'Loading file {filename}')
+    with open(filename, 'rb') as f:
+        A = pickle.load(f)
 
-try:
-    original_size = len(original_observations[0])
-except IndexError:
-    print("The list observations you provided is empty!")
-    exit(-1)
-
-basic_patterns = [{i} for i in range(original_size)]
-
-observations = [
-    frozenset([i for i, value in enumerate(observation) if value != 0])
-    for observation in original_observations
-]
-
-find_true_patternset(pattern_size, observations, trafos, basic_patterns, original_size)
-
-# level = 0
-# while True:
-#    print("level " + str(level) + "...")
-#    with open("plotting_data_lvl_" + str(level) + ".txt", "w") as output:
-#        output.write('dimensions = (1, 12, 7); color_depth = 3; columns = 3; mode = "given_data";\n')
-#        basic_patterns = list(set().union(*find_basic_patterns(pattern_size, observations, trafos, output, basic_patterns, original_size)))
-#    print("level completed")
-#    if level == level_bound:
-#        break
-#    level += 1
+    find_permutations(
+        A=A,
+        norm=Norm.L_1,
+        solver=Solver.SCIP,
+        objective_bound=0.01,
+        time_limit=None,
+        known_entries=None
+    )

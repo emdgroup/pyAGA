@@ -54,3 +54,11 @@ Thumbs.db
 
 .vscode
 mipsym
+
+# from old integer programmin repo
+env
+workspace.code-workspace
+__pycache__
+.DS_Store
+Highs.log
+plots
