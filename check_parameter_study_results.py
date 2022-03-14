@@ -62,7 +62,7 @@ for status_file in glob.glob(f"{jobarray_dirname}/status_finished*"):
         ax.plot(params[1], params[3], marker="o", color=color)
         runtime_labels[params].set_visible(False)
 
-fig.savefig(f"{jobarray_dirname}/current_state.pdf")
+fig.savefig(f"{jobarray_dirname}/current_state_{jobarray_id}.pdf")
 
 
 
