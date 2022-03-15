@@ -18,9 +18,9 @@ from transformation_finder import find_trafos
 from permutation_group_utils import find_simple_generators
 
 
-# world_name = "two_letter_words_20x10"
-world_name = "one_letter_words_10x5"
-percentage = "98.0"
+world_name = "two_letter_words_no_axsym_15x15_rotations"
+# world_name = "one_letter_words_10x5"
+percentage = "20.0"
 # percentage = "95.0"
 integer_matrices = False
 trafo_round_decimals = None
@@ -29,7 +29,7 @@ kde_bandwidth = 1e-3
 use_integer_programming = True
 quiet = False
 norm = Norm.L_INFINITY
-error_value_limit = 0.005
+error_value_limit = 0.01
 log_to_file = False
 
 
@@ -62,7 +62,7 @@ with open(mat_filename, "rb") as correlation_matrix_file:
     correlation_matrix = np.transpose(pickle.load(correlation_matrix_file))
     # trafos = find_trafos(correlation_matrix, trafo_accuracy)
     num_variables = correlation_matrix.shape[0]
-    trafos, average_matchrate_per_trafo, num_MIP_calls = find_trafos(
+    trafos, num_MIP_calls = find_trafos(
         correlation_matrix,
         fault_tolerance=int(
             trafo_fault_tolerance_ratio
@@ -75,21 +75,6 @@ with open(mat_filename, "rb") as correlation_matrix_file:
         error_value_limit=error_value_limit,
         use_integer_programming=use_integer_programming
     )
-
-
-    # Experimental
-    # trafos, average_matchrate_per_trafo, num_MIP_calls = find_trafos(
-    #    correlation_matrix,
-    #    fault_tolerance=int(
-    #        trafo_fault_tolerance_ratio
-    #        * num_variables),
-    #    round_decimals=trafo_round_decimals,
-    #    quiet=quiet,
-    #    bandwidth=kde_bandwidth,
-    #    casename=world_name, norm=norm,
-    #    use_integer_programming=use_integer_programming,
-    #    false_map_resistance_per_node=3
-    # )
 
 if not quiet:
     logger.info(f"Total number of found trafos {len(trafos)}")
