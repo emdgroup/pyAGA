@@ -19,12 +19,12 @@ import pandas as pd
 from colorama import Fore, Style
 from sympy.combinatorics import PermutationGroup, Permutation
 
-from transformation_finder import find_trafos
+from transformation_finder import find_automorphisms
 from mipsym.mip import Norm
 from mipsym.tools import to_matrix, matshow, deviation_value
 import pickle
 
-logger = logging.getLogger("trafofinder_presolving")
+logger = logging.getLogger("pyAGA_presolving")
 
 
 def run_parameter_study(
@@ -103,7 +103,7 @@ def find_trafos_wrapper(
     stop_thread: Callable[[None], bool],
 ) -> None:
     """
-    This function is a wrapper around the usual find_trafos s.t. the results are written
+    This function is a wrapper around the usual find_automorphisms s.t. the results are written
     to the out-parameter "results" instead of being returned.
     :param correlation_matrix: The adjacency matrix of the graph whose symmetries we
     want to find.
@@ -126,7 +126,7 @@ def find_trafos_wrapper(
     :param stop_thread: This function passes along a lambda callback to tell this
     thread to terminate.
     """
-    trafos, number_of_MIP_calls = find_trafos(
+    trafos, number_of_MIP_calls = find_automorphisms(
         correlation_matrix,
         fault_tolerance=fault_tolerance,
         round_decimals=trafo_round_decimals,

@@ -7,7 +7,7 @@ import pickle
 import matplotlib.pyplot as plt
 import scipy.signal as spsig
 
-logger = logging.getLogger("trafofinder_presolving")
+logger = logging.getLogger("pyAGA_presolving")
 
 def coalesce_values(matrix):
     """

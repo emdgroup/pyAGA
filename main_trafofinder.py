@@ -11,7 +11,7 @@ import numpy as np
 from mipsym.mip import Norm
 from mipsym.tools import to_matrix, matshow
 
-from transformation_finder import find_trafos
+from transformation_finder import find_automorphisms
 from permutation_group_utils import find_simple_generators
 
 
@@ -44,7 +44,7 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s] %(message)s',
     handlers=handlers,
 )
-logger = logging.getLogger("trafofinder_presolving")
+logger = logging.getLogger("pyAGA_presolving")
 logger.setLevel(logging.DEBUG)
 
 
@@ -57,9 +57,9 @@ else:
 with open(mat_filename, "rb") as correlation_matrix_file:
     logging.info(f"Loading matrix {mat_filename}")
     correlation_matrix = np.transpose(pickle.load(correlation_matrix_file))
-    # trafos = find_trafos(correlation_matrix, trafo_accuracy)
+    # trafos = find_automorphisms(correlation_matrix, trafo_accuracy)
     num_variables = correlation_matrix.shape[0]
-    trafos, num_MIP_calls = find_trafos(
+    trafos, num_MIP_calls = find_automorphisms(
         correlation_matrix,
         fault_tolerance=int(
             trafo_fault_tolerance_ratio

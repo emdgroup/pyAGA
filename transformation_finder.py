@@ -14,7 +14,7 @@ from mipsym.mip_reduced import create_reduced_mip_model
 from mipsym.mip import create_mip_solver
 from mipsym.tools import to_ndarray, to_list, to_matrix, matshow, deviation_value
 
-logger = logging.getLogger('trafofinder_presolving')
+logger = logging.getLogger('pyAGA_presolving')
 
 
 def print_permutation(text: str, norm: Norm, a: np.ndarray, perm: List[int]):
@@ -24,7 +24,7 @@ def print_permutation(text: str, norm: Norm, a: np.ndarray, perm: List[int]):
     logger.info(f'Permutation = {perm}')
 
 
-def find_trafos(
+def find_automorphisms(
     adjacency_matrix: np.ndarray,
     fault_tolerance: int,
     round_decimals: int,
@@ -37,7 +37,7 @@ def find_trafos(
     stop_thread: Callable[[None], bool] = None,
 ) -> List[List[Union[int, None]]]:
     """
-    Find all transformations (i.e. graph symmetries) on a given graph.
+    Find approximate automorphisms (i.e. graph symmetries) of a given graph.
     :param adjacency_matrix: The adjacency matrix of the graph.
     :param fault_tolerance: The number of tolerated unmappable nodes.
     :param round_decimals: The number of decimals left after rounding the adjacency
@@ -47,7 +47,8 @@ def find_trafos(
     subsequent bin calculation.
     :param casename: The name of the testcase.
     :param norm: The norm used to calculate the deviation value (the error term).
-    :param error_value_limit:
+    :param error_value_limit: The limit a permutation can deviate from a perfect
+    graph symmetry in order for it to be included in the permutation group.
     :param use_integer_programming: Whether or not to use the integer programming
     routines to fill out partial transformations.
     :param stop_thread: This function passes along a lambda callback to tell this
@@ -115,7 +116,8 @@ def calculate_trafos(adjacency_matrix: np.ndarray, equivalency_classes: List[Lis
     :param fault_tolerance: The number of tolerated unmappable nodes.
     :param casename: The name of the testcase.
     :param norm: The norm used to calculate the deviation value (the error term).
-    :param error_value_limit:
+    :param error_value_limit: The limit a permutation can deviate from a perfect
+    graph symmetry in order for it to be included in the permutation group.
     :param use_integer_programming: Whether or not to use the integer programming
     routines to fill out partial transformations.
     :param number_of_MIP_calls: A hacked mutable int (a list containing only one
