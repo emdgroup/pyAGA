@@ -132,7 +132,6 @@ def find_trafos_wrapper(
         round_decimals=trafo_round_decimals,
         quiet=quiet,
         bandwidth=kde_bandwidth,
-        casename=world_name,
         norm=norm,
         error_value_limit=error_value_limit,
         use_integer_programming=use_integer_programming,
@@ -288,11 +287,10 @@ def try_bandwidths_and_tolerance_ratios(
                     f"number_of_MIP_calls.valid = {number_of_MIP_calls.valid[0]},   "
                     f"number_of_MIP_calls.invalid = "
                     f"{number_of_MIP_calls.invalid[0]},   "
-                    +
-                    (
+                    + (
                         f"time = {round(time.time() - time_start, 2)} s   "
-                        if not timed_out else
-                        f"time >= {round(time.time() - time_start, 2)} s (Timeout)  "
+                        if not timed_out
+                        else f"time >= {round(time.time() - time_start, 2)} s (Timeout)  "
                     )
                 )
             else:

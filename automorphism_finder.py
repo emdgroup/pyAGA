@@ -30,7 +30,6 @@ def find_automorphisms(
     round_decimals: int,
     quiet: bool,
     bandwidth: float,
-    casename: str,
     norm: Norm,
     error_value_limit,
     use_integer_programming: bool,
@@ -45,7 +44,6 @@ def find_automorphisms(
     :param quiet: Whether to print debugging information to the terminal.
     :param bandwidth: The bandwidth parameter for the kernel density estimation and
     subsequent bin calculation.
-    :param casename: The name of the testcase.
     :param norm: The norm used to calculate the deviation value (the error term).
     :param error_value_limit: The limit a permutation can deviate from a perfect
     graph symmetry in order for it to be included in the permutation group.
@@ -86,7 +84,6 @@ def find_automorphisms(
         possible_mappings,
         quiet,
         fault_tolerance,
-        casename,
         norm,
         error_value_limit,
         use_integer_programming,
@@ -104,7 +101,6 @@ def calculate_trafos(
     possible_mappings: List[Set],
     quiet: bool,
     fault_tolerance: int,
-    casename: str,
     norm: Norm,
     error_value_limit,
     use_integer_programming: bool,
@@ -124,7 +120,6 @@ def calculate_trafos(
     each position.
     :param quiet: Whether to print debugging information to the terminal.
     :param fault_tolerance: The number of tolerated unmappable nodes.
-    :param casename: The name of the testcase.
     :param norm: The norm used to calculate the deviation value (the error term).
     :param error_value_limit: The limit a permutation can deviate from a perfect
     graph symmetry in order for it to be included in the permutation group.
@@ -179,7 +174,6 @@ def calculate_trafos(
                 new_poss,
                 quiet,
                 fault_tolerance,
-                casename,
                 norm,
                 error_value_limit,
                 use_integer_programming,
