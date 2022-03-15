@@ -75,10 +75,10 @@ def find_automorphisms(
     # adjacency matrix
     possible_mappings = [set(range(n))] * n
     # this is where the algorithm starts
-    trafos = []
+    automorphisms = []
     # Quick and dirty way to implement mutable python ints. Yeah, I know.
     number_of_MIP_calls = SimpleNamespace(valid=[0], invalid=[0])
-    calculate_trafos(
+    calculate_automorphisms(
         adjacency_matrix,
         equivalency_classes,
         possible_mappings,
@@ -88,14 +88,14 @@ def find_automorphisms(
         error_value_limit,
         use_integer_programming,
         number_of_MIP_calls,
-        trafos,
+        automorphisms,
         stop_thread,
     )
 
-    return trafos, number_of_MIP_calls
+    return automorphisms, number_of_MIP_calls
 
 
-def calculate_trafos(
+def calculate_automorphisms(
     adjacency_matrix: np.ndarray,
     equivalency_classes: List[List[np.ndarray]],
     possible_mappings: List[Set],
@@ -168,7 +168,7 @@ def calculate_trafos(
                     "self-concurrences have fallen into the same bin."
                 )
                 assert False
-            calculate_trafos(
+            calculate_automorphisms(
                 adjacency_matrix,
                 equivalency_classes,
                 new_poss,

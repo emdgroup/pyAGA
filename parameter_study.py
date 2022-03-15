@@ -89,7 +89,7 @@ def run_parameter_study(
                     return
 
 
-def find_trafos_wrapper(
+def find_automorphisms_wrapper(
     correlation_matrix: np.ndarray,
     fault_tolerance: int,
     trafo_round_decimals: int,
@@ -126,7 +126,7 @@ def find_trafos_wrapper(
     :param stop_thread: This function passes along a lambda callback to tell this
     thread to terminate.
     """
-    trafos, number_of_MIP_calls = find_automorphisms(
+    automorphisms, number_of_MIP_calls = find_automorphisms(
         correlation_matrix,
         fault_tolerance=fault_tolerance,
         round_decimals=trafo_round_decimals,
@@ -137,7 +137,7 @@ def find_trafos_wrapper(
         use_integer_programming=use_integer_programming,
         stop_thread=stop_thread,
     )
-    result[0] = trafos
+    result[0] = automorphisms
     result[1] = number_of_MIP_calls
 
 
@@ -185,16 +185,16 @@ def try_bandwidths_and_tolerance_ratios(
     """
     timed_out = False
     for kde_bandwidth in kde_bandwidths:
-        for trafo_fault_tolerance_ratio in fault_tolerance_ratios:
+        for fault_tolerance_ratio in fault_tolerance_ratios:
             if not timed_out:
                 results = [None] * 2
                 stop_thread = False
                 num_variables = adjacency_matrix.shape[0]
                 thread = threading.Thread(
-                    target=find_trafos_wrapper,
+                    target=find_automorphisms_wrapper,
                     args=(
                         adjacency_matrix,
-                        int(trafo_fault_tolerance_ratio * num_variables),
+                        int(fault_tolerance_ratio * num_variables),
                         trafo_round_decimals,
                         quiet,
                         kde_bandwidth,
@@ -230,7 +230,7 @@ def try_bandwidths_and_tolerance_ratios(
                 thread.join(timeout=1)
 
                 if thread.is_alive():
-                    logger.warning(f"Calculation of trafos timed out.")
+                    logger.warning(f"Calculation of automorphisms timed out.")
                     # If a given bandwidth has timed out, all other subsequent
                     # bandwidths (as we assume an ordered list) will time out as well.
                     # Set this flag in order to skip them.
@@ -239,13 +239,13 @@ def try_bandwidths_and_tolerance_ratios(
                     while thread.is_alive():
                         time.sleep(0.5)
 
-                trafos, number_of_MIP_calls = results
+                automorphisms, number_of_MIP_calls = results
                 (
                     num_generators,
                     all_fundamentals_contained,
                     group_order,
                 ) = num_generators_contained(
-                    trafos, norm, adjacency_matrix, error_value_limit
+                    automorphisms, norm, adjacency_matrix, error_value_limit
                 )
                 if expected_permutation_group_order[study_name] < group_order:
                     is_group_order_correct = "too many"
@@ -261,7 +261,7 @@ def try_bandwidths_and_tolerance_ratios(
                 parameters = (
                     current_percentage,
                     kde_bandwidth,
-                    trafo_fault_tolerance_ratio,
+                    fault_tolerance_ratio,
                     error_value_limit,
                     all_fundamentals_contained,
                     group_order,
@@ -275,10 +275,10 @@ def try_bandwidths_and_tolerance_ratios(
                 logger.info(
                     f"percentage_observations = {current_percentage},  "
                     f"kde_bandwidth = {round(kde_bandwidth, 12)},  "
-                    f"trafo_fault_tolerance_ratio = {trafo_fault_tolerance_ratio},  "
+                    f"fault_tolerance_ratio = {fault_tolerance_ratio},  "
                     f"trafo_round_decimals = {trafo_round_decimals},   "
                     f"error_value_limit = {error_value_limit},  "
-                    f"num_found_trafos = {len(trafos)},  "
+                    f"num_found_automorphisms = {len(automorphisms)},  "
                     f"num_generators = {num_generators},  "
                     f"all_fundamentals_contained = {all_fundamentals_contained},  "
                     f"group_order = {group_order},  "
@@ -299,7 +299,7 @@ def try_bandwidths_and_tolerance_ratios(
                 parameters = (
                     current_percentage,
                     kde_bandwidth,
-                    trafo_fault_tolerance_ratio,
+                    fault_tolerance_ratio,
                     error_value_limit,
                     "skipped",
                     "skipped",
@@ -311,7 +311,7 @@ def try_bandwidths_and_tolerance_ratios(
                 logger.info(
                     f"percentage_observations = {current_percentage},  "
                     f"kde_bandwidth = {round(kde_bandwidth, 12)},  "
-                    f"trafo_fault_tolerance_ratio = {trafo_fault_tolerance_ratio},  "
+                    f"fault_tolerance_ratio = {fault_tolerance_ratio},  "
                     f"error_value_limit = {error_value_limit},  "
                     f"all_fundamentals_contained = skipped,  "
                     f"group_order = skipped,  "
@@ -323,7 +323,7 @@ def try_bandwidths_and_tolerance_ratios(
 
 
 def num_generators_contained(
-    trafos: List[List[int]],
+    automorphisms: List[List[int]],
     norm: Norm,
     adjacency_matrix: np.ndarray,
     error_value_limit: float,
@@ -332,7 +332,7 @@ def num_generators_contained(
     Calculate an upper bound for the number of generators necessary to generate the
     permutation group of the given transformations. Also check if the "fundamental
     generators" of each transformation are present in the transformations.
-    :param trafos: The transformations from which to calculate the generators
+    :param automorphisms: The transformations from which to calculate the generators
     :param norm: The norm with which to compute the deviation value.
     :param adjacency_matrix: The adjacency matrix of the graph
     :param error_value_limit: The limit for the deviation value of each group element in
@@ -353,8 +353,8 @@ def num_generators_contained(
     # finding a horizontal shift by 2 pixels will not disallow also finding and
     # adding the horizontal shift by 1 pixel to the list.
     deviation_values = []
-    for trafo in trafos:
-        fundamental_generator = to_matrix(trafo)
+    for automorphism in automorphisms:
+        fundamental_generator = to_matrix(automorphism)
         current_power = fundamental_generator
         is_valid = True
         for power in count(0):
@@ -376,7 +376,7 @@ def num_generators_contained(
 
         if is_valid:
             g = PermutationGroup(*permutation_group_generators)
-            p = Permutation(trafo)
+            p = Permutation(automorphism)
             if p not in g:
                 permutation_group_generators.append(p)
     tmp = []

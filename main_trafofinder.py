@@ -57,7 +57,7 @@ else:
 with open(mat_filename, "rb") as correlation_matrix_file:
     logging.info(f"Loading matrix {mat_filename}")
     correlation_matrix = np.transpose(pickle.load(correlation_matrix_file))
-    # trafos = find_automorphisms(correlation_matrix, trafo_accuracy)
+    # automorphisms = find_automorphisms(correlation_matrix, trafo_accuracy)
     num_variables = correlation_matrix.shape[0]
     trafos, num_MIP_calls = find_automorphisms(
         correlation_matrix,
@@ -72,7 +72,7 @@ with open(mat_filename, "rb") as correlation_matrix_file:
 
 if not quiet:
     logger.info(f"Total number of found trafos {len(trafos)}")
-    # for i, trafo in enumerate(trafos):
+    # for i, trafo in enumerate(automorphisms):
     #    matrix = to_matrix(trafo)
     #    logger.info(f'Printing permutation number {i+1}')
     #    logger.info('\n' + matshow(matrix))
