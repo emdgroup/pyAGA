@@ -14,14 +14,14 @@ from mipsym.mip_reduced import create_reduced_mip_model
 from mipsym.mip import create_mip_solver
 from mipsym.tools import to_ndarray, to_list, to_matrix, matshow, deviation_value
 
-logger = logging.getLogger('pyAGA_presolving')
+logger = logging.getLogger("pyAGA_presolving")
 
 
 def print_permutation(text: str, norm: Norm, a: np.ndarray, perm: List[int]):
     p = vt.to_matrix(perm)
     logger.info(text)
-    logger.info(f'Error Norm  = {deviation_value(norm, p, a)}')
-    logger.info(f'Permutation = {perm}')
+    logger.info(f"Error Norm  = {deviation_value(norm, p, a)}")
+    logger.info(f"Permutation = {perm}")
 
 
 def find_automorphisms(
@@ -98,10 +98,20 @@ def find_automorphisms(
     return trafos, number_of_MIP_calls
 
 
-def calculate_trafos(adjacency_matrix: np.ndarray, equivalency_classes: List[List[np.ndarray]],
-                     possible_mappings: List[Set], quiet: bool, fault_tolerance: int, casename: str, norm: Norm,
-                     error_value_limit, use_integer_programming: bool, number_of_MIP_calls: List[int],
-                     result: List[List[Union[int, None]]], stop_thread) -> None:
+def calculate_trafos(
+    adjacency_matrix: np.ndarray,
+    equivalency_classes: List[List[np.ndarray]],
+    possible_mappings: List[Set],
+    quiet: bool,
+    fault_tolerance: int,
+    casename: str,
+    norm: Norm,
+    error_value_limit,
+    use_integer_programming: bool,
+    number_of_MIP_calls: List[int],
+    result: List[List[Union[int, None]]],
+    stop_thread,
+) -> None:
     """Calculate the transformations with the given possible mappings. This function
     is called recursively, until all sets in the possible mappings have at most one
     entry.
@@ -132,16 +142,16 @@ def calculate_trafos(adjacency_matrix: np.ndarray, equivalency_classes: List[Lis
         return
 
     number_of_matches = {
-        'impossible': sum(1 for i in possible_mappings if len(i) == 0),
-        'perfect': sum(1 for i in possible_mappings if len(i) == 1),
-        'unsure': sum(1 for i in possible_mappings if len(i) > 1),
+        "impossible": sum(1 for i in possible_mappings if len(i) == 0),
+        "perfect": sum(1 for i in possible_mappings if len(i) == 1),
+        "unsure": sum(1 for i in possible_mappings if len(i) > 1),
     }
     assert sum(number_of_matches.values()) == len(possible_mappings)
 
-    if number_of_matches['impossible'] > fault_tolerance:
+    if number_of_matches["impossible"] > fault_tolerance:
         return  # number of unmatched nodes exceeds fault tolerance
 
-    if number_of_matches['unsure'] > 0:
+    if number_of_matches["unsure"] > 0:
         # search for the shortest remaining possible mapping...
         node_of_shortest = -1
         length_of_shortest = 2 * len(possible_mappings)
@@ -159,19 +169,33 @@ def calculate_trafos(adjacency_matrix: np.ndarray, equivalency_classes: List[Lis
             )
             if new_poss == possible_mappings:
                 logger.error(
-                    'This should not happen. Please assure that all '
-                    'self-concurrences have fallen into the same bin.'
+                    "This should not happen. Please assure that all "
+                    "self-concurrences have fallen into the same bin."
                 )
                 assert False
-            calculate_trafos(adjacency_matrix, equivalency_classes, new_poss, quiet, fault_tolerance, casename, norm,
-                             error_value_limit, use_integer_programming, number_of_MIP_calls, result, stop_thread)
+            calculate_trafos(
+                adjacency_matrix,
+                equivalency_classes,
+                new_poss,
+                quiet,
+                fault_tolerance,
+                casename,
+                norm,
+                error_value_limit,
+                use_integer_programming,
+                number_of_MIP_calls,
+                result,
+                stop_thread,
+            )
     else:
         # Check if possible_mappings contains identical single_element entries
-        perfectly_matched = [list(mapping)[0] for mapping in possible_mappings if len(mapping) == 1]
+        perfectly_matched = [
+            list(mapping)[0] for mapping in possible_mappings if len(mapping) == 1
+        ]
         if len(set(perfectly_matched)) < len(perfectly_matched):
             return  # supplied possible_mappings does not allow for a valid permutation
 
-        if number_of_matches['impossible'] == 0:
+        if number_of_matches["impossible"] == 0:
             # for every node, we exactly have one target node left - this is a complete permutation
             permutation = [s.pop() for s in possible_mappings]
 
@@ -191,16 +215,16 @@ def calculate_trafos(adjacency_matrix: np.ndarray, equivalency_classes: List[Lis
                         result.append(perm)
                 if logger.level <= logging.INFO:
                     print_permutation(
-                        f'Permutation number {len(result)} matched all nodes.',
+                        f"Permutation number {len(result)} matched all nodes.",
                         norm,
                         adjacency_matrix,
                         permutation,
                     )
-                logger.debug('\n' + matshow(to_matrix(permutation)))
+                logger.debug("\n" + matshow(to_matrix(permutation)))
             else:
                 logger.info(
-                    'The transformation generated in the presolving step is'
-                    ' consistent with a transformation already found.'
+                    "The transformation generated in the presolving step is"
+                    " consistent with a transformation already found."
                 )
         else:
             # for at least one node there is no target node left
@@ -210,31 +234,33 @@ def calculate_trafos(adjacency_matrix: np.ndarray, equivalency_classes: List[Lis
             permutation = [s.pop() if len(s) > 0 else None for s in possible_mappings]
 
             logger.info(
-                f'Incomplete permutation number {len(result)} matched '
+                f"Incomplete permutation number {len(result)} matched "
                 f'{number_of_matches["perfect"]} nodes.'
             )
             logger.info(permutation)
 
             if vt.verify_one_transformation(permutation, result):
                 logger.info(
-                    'The partial transformation generated in the presolving step is'
-                    ' consistent with at least one transformation already found.'
+                    "The partial transformation generated in the presolving step is"
+                    " consistent with at least one transformation already found."
                 )
                 return
 
             if use_integer_programming:
                 # Count the number of total MIP calls, starting from 1
                 logger.info(
-                    f'MIP call #'
-                    f'{number_of_MIP_calls.valid[0] + number_of_MIP_calls.invalid[0] + 1}'
+                    f"MIP call #"
+                    f"{number_of_MIP_calls.valid[0] + number_of_MIP_calls.invalid[0] + 1}"
                 )
-                logger.info('Trying to fill missing entries in permutation using MIP')
+                logger.info("Trying to fill missing entries in permutation using MIP")
 
                 # Construct a reduced MIP only containing rows/cols that are still not resolved
                 # Mappings for identifying the rows/cols of the reduced problem and corresponding matrices
 
                 row_index_map = [i for i, p in enumerate(permutation) if p is None]
-                col_index_map = [i for i, _ in enumerate(permutation) if i not in permutation]
+                col_index_map = [
+                    i for i, _ in enumerate(permutation) if i not in permutation
+                ]
 
                 # Calculate a temporary complete permutation that assigns unmapped vertices in some way
                 # Idea is to apply this to the adjacency matrix s.t. one obtains correctly permuted A_row, A_col
@@ -256,7 +282,7 @@ def calculate_trafos(adjacency_matrix: np.ndarray, equivalency_classes: List[Lis
                 ip_solver, solve_params = create_mip_solver(solver, norm)
 
                 try:
-                    logger.info(f'Solving using {solver}')
+                    logger.info(f"Solving using {solver}")
                     ip_results = ip_solver.solve(
                         model,
                         tee=not quiet,
@@ -275,9 +301,9 @@ def calculate_trafos(adjacency_matrix: np.ndarray, equivalency_classes: List[Lis
                         assert filled_permutation[row_index_map[i]] is None
                         filled_permutation[row_index_map[i]] = col_index_map[p]
 
-                    logger.info('Solver Result:\n' + str(ip_results))
+                    logger.info("Solver Result:\n" + str(ip_results))
                     print_permutation(
-                        'Filled Permutation.',
+                        "Filled Permutation.",
                         norm,
                         adjacency_matrix,
                         filled_permutation,
@@ -306,19 +332,19 @@ def calculate_trafos(adjacency_matrix: np.ndarray, equivalency_classes: List[Lis
                     else:
                         number_of_MIP_calls.invalid[0] += 1
                         logger.info(
-                            f'Filled permutation {permutation} with MIP, '
-                            f'but the deviation value {deviation} is '
-                            f'higher than the limit of {error_value_limit}.'
+                            f"Filled permutation {permutation} with MIP, "
+                            f"but the deviation value {deviation} is "
+                            f"higher than the limit of {error_value_limit}."
                         )
 
                 except RuntimeError:
-                    logger.warning(f'No solution found for {permutation}')
-                    logger.warning('Solver Result:\n' + str(ip_results))
+                    logger.warning(f"No solution found for {permutation}")
+                    logger.warning("Solver Result:\n" + str(ip_results))
 
             else:
                 result.append(permutation)
 
-            logger.debug('\n' + matshow(to_matrix(permutation)))
+            logger.debug("\n" + matshow(to_matrix(permutation)))
 
 
 def filter_perms(
