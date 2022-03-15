@@ -11,7 +11,7 @@ import numpy as np
 from mipsym.mip import Norm
 from mipsym.tools import to_matrix, matshow
 
-from transformation_finder import find_automorphisms
+from automorphism_finder import find_automorphisms
 from permutation_group_utils import find_simple_generators
 
 
