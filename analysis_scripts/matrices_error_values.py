@@ -47,7 +47,8 @@ def main(testcases, percentages):
 if __name__ == "__main__":
     percentages = ["100", "99.9", "99.0", "98.0", "95.0", "90.0", "85.0", "80.0", "75.0", "70.0", "65.0", "60.0", "55.0",
                    "50.0", "40.0", "30.0", "20.0", "10.0", "5.0"]
-    testcases = ["two_letter_words_20x10", "two_letter_words_15x15_rotations",
+    testcases = ["two_letter_words_20x10",
+                 "two_letter_words_15x15_rotations",
                  "two_letter_words_no_axsym_15x15_rotations",
                  "two_letter_words_no_axsym_13x7_letters_indiv_colors"]
     error_values = main(testcases, percentages)
