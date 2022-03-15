@@ -2,9 +2,6 @@ import os
 import sys
 from datetime import datetime
 
-import local_import_paths
-local_import_paths.import_paths()
-
 import logging
 import pickle
 import gzip

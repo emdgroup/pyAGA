@@ -19,9 +19,6 @@ import pandas as pd
 from colorama import Fore, Style
 from sympy.combinatorics import PermutationGroup, Permutation
 
-import local_import_paths
-
-local_import_paths.import_paths()
 from transformation_finder import find_trafos
 from mipsym.mip import Norm
 from mipsym.tools import to_matrix, matshow, deviation_value

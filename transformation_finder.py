@@ -9,9 +9,6 @@ from sympy.combinatorics import PermutationGroup, Permutation
 import kernel_density
 import verify_transformations as vt
 
-import local_import_paths
-
-local_import_paths.import_paths()
 from mipsym.mip import Norm, Solver
 from mipsym.mip_reduced import create_reduced_mip_model
 from mipsym.mip import create_mip_solver
