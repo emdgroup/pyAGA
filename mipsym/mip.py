@@ -25,8 +25,7 @@ class Norm(Enum):
 class Solver(Enum):
     GLPK = 0
     IPOPT = 1
-    HiGHS = 2
-    SCIP = 3
+    SCIP = 2
 
 
 def create_mip_model(norm: Norm, A: np.ndarray):
