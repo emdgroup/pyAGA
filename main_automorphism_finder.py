@@ -15,18 +15,26 @@ from automorphism_finder import find_automorphisms
 from permutation_group_utils import find_simple_generators
 
 
+# Set the parameters of the calculation
+# Choose which testcase to run. This testcase corresponds to the world with dimensions 15x15, where letters with
+# horizontal or vertical axial symmetries have been removed.
 world_name = "two_letter_words_no_axsym_15x15_rotations"
-# world_name = "one_letter_words_10x5"
+# This parameter corresponds to the percentage of unique observations present for the calculation of the concurrence matrix.
 percentage = "20.0"
-# percentage = "95.0"
-integer_matrices = False
 trafo_round_decimals = None
+# The fault tolerance ratio corresponds to the maximum ratio of nodes for which we accept that no mapping exists.
 trafo_fault_tolerance_ratio = 0.25
+# The bandwidth is the parameter of the kernel density estimation, controlling the number and width of the bins.
 kde_bandwidth = 1e-3
 use_integer_programming = True
+# With this parameter, you can mute some terminal outputs.
 quiet = False
+# Select the norm which will be used to measure the quality / the "error" of the found permutations.
+# Depending on whether the calculated norm is bigger or smaller than the error_value_limit below, we decide whether
+# the permutation will be included in the permutation group or not.
 norm = Norm.L_INFINITY
 error_value_limit = 0.01
+# Choose whether to create a log file.
 log_to_file = False
 
 
@@ -47,13 +55,7 @@ logging.basicConfig(
 logger = logging.getLogger("pyAGA_presolving")
 logger.setLevel(logging.DEBUG)
 
-
-if integer_matrices:
-    mat_filename = f"data/{world_name}_integers_concurrence_matrix_{percentage}.pickle"
-else:
-    mat_filename = f"data/{world_name}_concurrence_matrix_{percentage}.pickle"
-
-
+mat_filename = f"data/{world_name}_concurrence_matrix_{percentage}.pickle"
 with open(mat_filename, "rb") as correlation_matrix_file:
     logging.info(f"Loading matrix {mat_filename}")
     correlation_matrix = np.transpose(pickle.load(correlation_matrix_file))
@@ -76,8 +78,6 @@ if not quiet:
     #    matrix = to_matrix(trafo)
     #    logger.info(f'Printing permutation number {i+1}')
     #    logger.info('\n' + matshow(matrix))
-
-if not quiet:
     logging.debug(
         "Trying to compute a small/minimal generating set for the found transformations..."
     )
