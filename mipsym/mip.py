@@ -132,31 +132,3 @@ def create_mip_solver(solver: Solver, norm: Norm):
         ip_solver.set_problem_format(ProblemFormat.mps)
 
     return ip_solver, solve_params
-
-
-# TODO: This can probably be optimized later by using SymPy Permutations
-def create_permutation_combination_constraints(m, all_permutations, id):
-    already_added = dict()
-    todo_list = deque()
-    todo_list.append((id, -1, 'id'))
-
-    while len(todo_list) > 0:
-        current_prod, previous_choice, name = todo_list.popleft()
-
-        repr = hash_array(current_prod)
-        assert len(repr) == current_prod.shape[0]
-        assert current_prod.shape[0] == current_prod.shape[1]
-
-        try:
-            already_added_permutation = already_added[repr]
-            logger.debug(f'Skipping [{name}] == [{already_added_permutation}]')
-        except KeyError:
-            logger.info(f'Adding Constraint for [{name}]')
-            m.knownPermutations.add(expr=sum(m.P[tuple(ij)] for ij in np.argwhere(current_prod)) <= current_prod.shape[0] - 1)
-            already_added[repr] = name
-
-            for ip, permutation in enumerate(all_permutations):
-                # prevent multiplying the same permutation that has just been used before
-                if ip != previous_choice:
-                    for p, power in enumerate(permutation):
-                        todo_list.append((current_prod@power, ip, f'{name} P_{ip}^{p+1}'))
