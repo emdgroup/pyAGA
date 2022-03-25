@@ -9,22 +9,6 @@ import scipy.signal as spsig
 
 logger = logging.getLogger("pyAGA_presolving")
 
-def coalesce_values(matrix):
-    """
-    Coalesce values of a given matrix in order to remove spread.
-    :param matrix: Input matrix
-    :return: The output matrix with coalesced values.
-    """
-
-    values, counts = np.unique(concurrence_matrix, return_counts=True)
-    maxima = spsig.argrelmax(counts)[0]
-    maxima_values = values[maxima]
-
-    for index, value in enumerate(values):
-        if index not in maxima:
-            diffs = np.abs(maxima_values - value)
-            pass
-
 
 def bins(matrix: np.ndarray, bandwidth: float, plot=False) -> List[float]:
     """
