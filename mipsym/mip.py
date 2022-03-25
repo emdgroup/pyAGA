@@ -8,7 +8,6 @@ import numpy as np
 import pyomo.environ as po
 from pyomo.opt import ProblemFormat, SolverStatus, TerminationCondition
 
-from mipsym.tools import matshow, matshow_pyomo, to_ndarray, to_list, hash_array, deviation_value
 from mipsym import scip  # noqa: F401
 
 

@@ -12,13 +12,6 @@ def deviation_value(norm: 'Norm', P: np.ndarray, A: np.ndarray):
         return np.sum((P @ A - A @ P)**2)
 
 
-def hash_array(arr: np.ndarray) -> Tuple[int]:
-    # Create a tuple with the indices of nonzero entries in arr
-    # This is unique for each permuation matrix and can be used
-    # e.g. as a key in a dict
-    return tuple(np.nonzero(arr.flatten())[0])
-
-
 def to_matrix(trafo) -> np.ndarray:
     """
     Turn a given list format permutation into a matrix.
@@ -81,19 +74,4 @@ def matshow(v: np.ndarray):
                 assert False
         lines += '|\n'
 
-    return lines
-
-
-def matshow_pyomo(v, m, n):
-    # Print ASCII-art of the matrix
-    lines = ''
-    for row in m:
-        lines += '|'
-        for col in n:
-            if not v[row, col].fixed:
-                lines += '?'
-            else:
-                val = v[row, col].value
-                lines += ' ' if val == 0 else str(val)
-        lines += '|\n'
     return lines
