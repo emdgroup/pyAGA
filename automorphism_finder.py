@@ -233,7 +233,7 @@ def calculate_automorphisms(
             )
             logger.info(permutation)
 
-            if vt.verify_one_transformation(permutation, result):
+            if vt.verify_transformation(permutation, result):
                 logger.info(
                     "The partial transformation generated in the presolving step is"
                     " consistent with at least one transformation already found."

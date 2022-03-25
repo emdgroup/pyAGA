@@ -4,27 +4,7 @@ from typing import List, Union
 import numpy as np
 
 
-def verify_transformations(
-    t_candidates: List[List[Union[int, None]]], casename: str
-) -> int:
-    """Return number of valid transformations within a list of transformations for a
-    given case.
-    :param t_candidates: The list of candidates.
-    :param casename: The name of the testcase.
-    :return: The number of valid transformations within the given transformation list.
-    """
-    with open(f"data/test_transformations_{casename}.pickle", "rb") as file:
-        test_transformations = pickle.load(file)
-    num_valid_transformations = 0
-    for t_candidate in t_candidates:
-        if verify_one_transformation(
-            t_candidate, test_transformations=test_transformations
-        ):
-            num_valid_transformations += 1
-    return num_valid_transformations
-
-
-def verify_one_transformation(
+def verify_transformation(
     t_candidate: List[Union[int, None]],
     test_transformations: List[List[Union[int, None]]] = None,
     casename: str = None,
@@ -73,26 +53,3 @@ def to_matrix(trafo: List[Union[int, None]]) -> np.ndarray:
             # this line in case one wants to set it to some other value for
             # visualization.
     return matrix
-
-
-def to_list(matrix):
-    """
-    Turn a given permutation matrix into the list format.
-    :param matrix: The permutation in matrix format.
-    :return: The permutation in list format.
-    """
-    perm = []
-    for row in matrix:
-        entry = np.argwhere(row == 1)[0][0]
-        perm.append(entry)
-    return perm
-
-
-def matshow(v: np.ndarray):
-    # Print ASCII-art of the matrix
-    for row in v:
-        line = "|"
-        for col in row:
-            line += " " if col == 0 else str(int(col))
-        line += "|"
-        print(line)
