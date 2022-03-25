@@ -9,7 +9,6 @@ import pyomo.environ as po
 from pyomo.opt import ProblemFormat, SolverStatus, TerminationCondition
 
 from mipsym.tools import matshow, matshow_pyomo, to_ndarray, to_list, hash_array, deviation_value
-from mipsym import highs  # noqa: F401
 from mipsym import scip  # noqa: F401
 
 
@@ -104,13 +103,6 @@ def create_mip_solver(solver: Solver, norm: Norm):
         solver_executable = []
         solver_options = dict()
         solve_params = dict(mip_solver='glpk', nlp_solver='ipopt')
-    elif solver == Solver.HiGHS:
-        solver_factory_params = dict(_name='highs')
-        solver_executable = [
-            '/Users/m290886/Downloads/HiGHS.v1.1.0.x86_64-apple-darwin/bin/highs',
-        ]
-        solver_options = dict()
-        solve_params = dict()
     elif solver == Solver.SCIP:
         solver_factory_params = dict(_name='scip')
         solver_executable = [
