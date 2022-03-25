@@ -2,14 +2,15 @@ import numpy as np
 from typing import Tuple
 
 
-def deviation_value(norm: 'Norm', P: np.ndarray, A: np.ndarray):
+def deviation_value(norm: "Norm", P: np.ndarray, A: np.ndarray):
     from mipsym.mip import Norm
+
     if norm == Norm.L_INFINITY:
         return np.max(np.abs(P @ A - A @ P))
     elif norm == Norm.L_1:
         return np.sum(np.abs(P @ A - A @ P))
     elif norm == Norm.L_2:
-        return np.sum((P @ A - A @ P)**2)
+        return np.sum((P @ A - A @ P) ** 2)
 
 
 def to_matrix(trafo) -> np.ndarray:
@@ -53,25 +54,25 @@ def to_list(matrix):
 
 def matshow(v: np.ndarray):
     # Print ASCII-art of the matrix
-    lines = ''
+    lines = ""
     for iRow in range(0, len(v), 2):
-        rows = v[iRow:iRow+2]
+        rows = v[iRow : iRow + 2]
 
         if len(rows) < 2:
             rows = np.vstack((rows, np.zeros(len(rows.T))))
 
-        lines += '|'
+        lines += "|"
         for col in rows.T:
             if col[0] == 0 and col[1] == 0:
-                lines += ' '
+                lines += " "
             elif col[0] == 1 and col[1] == 0:
-                lines += '▀'
+                lines += "▀"
             elif col[0] == 0 and col[1] == 1:
-                lines += '▄'
+                lines += "▄"
             elif col[0] == 1 and col[1] == 1:
-                lines += '█'
+                lines += "█"
             else:
                 assert False
-        lines += '|\n'
+        lines += "|\n"
 
     return lines

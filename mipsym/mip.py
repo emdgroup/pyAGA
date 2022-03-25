@@ -11,8 +11,10 @@ from pyomo.opt import ProblemFormat, SolverStatus, TerminationCondition
 from mipsym import scip  # noqa: F401
 
 
-logger = logging.getLogger('integer_programming')
-logger.setLevel(level=logging.DEBUG)  # set to logging.INFO for less, to logging.DEBUG for more verbosity
+logger = logging.getLogger("integer_programming")
+logger.setLevel(
+    level=logging.DEBUG
+)  # set to logging.INFO for less, to logging.DEBUG for more verbosity
 
 
 class Norm(Enum):
@@ -40,79 +42,102 @@ def create_mip_model(norm: Norm, A: np.ndarray):
     model = po.ConcreteModel()
     model.N = po.Set(initialize=range(n_nodes))
 
-    logger.debug('Creating Parameter for Concurrence Matrix')
-    model.A = po.Param(model.N, model.N, initialize=lambda m, i, j: A[i, j], within=po.Reals)
+    logger.debug("Creating Parameter for Concurrence Matrix")
+    model.A = po.Param(
+        model.N, model.N, initialize=lambda m, i, j: A[i, j], within=po.Reals
+    )
 
-    logger.debug('Creating Boolean Permutation Matrix')
+    logger.debug("Creating Boolean Permutation Matrix")
     model.P = po.Var(model.N, model.N, within=po.Boolean)
 
-    logger.debug('Creating Row Sum Constraint for the Permutation Matrix')
-    model.rowSum = po.Constraint(model.N, rule=lambda m, i: 1 == sum(m.P[i, j] for j in m.N))
-    logger.debug('Creating Column Sum Constraint for the Permutation Matrix')
-    model.colSum = po.Constraint(model.N, rule=lambda m, j: 1 == sum(m.P[i, j] for i in m.N))
+    logger.debug("Creating Row Sum Constraint for the Permutation Matrix")
+    model.rowSum = po.Constraint(
+        model.N, rule=lambda m, i: 1 == sum(m.P[i, j] for j in m.N)
+    )
+    logger.debug("Creating Column Sum Constraint for the Permutation Matrix")
+    model.colSum = po.Constraint(
+        model.N, rule=lambda m, j: 1 == sum(m.P[i, j] for i in m.N)
+    )
 
-    logger.debug('Creating Constraint to Exclude Identity')
-    model.identityConstraint = po.Constraint(expr=sum(model.P[i, i] for i in range(n_nodes)) <= n_nodes - 1)
+    logger.debug("Creating Constraint to Exclude Identity")
+    model.identityConstraint = po.Constraint(
+        expr=sum(model.P[i, i] for i in range(n_nodes)) <= n_nodes - 1
+    )
 
     def deviation(m, i, j):
-        return sum(m.P[i, k]*m.A[k, j] - m.A[i, k]*m.P[k, j] for k in m.N)
+        return sum(m.P[i, k] * m.A[k, j] - m.A[i, k] * m.P[k, j] for k in m.N)
 
     if norm == Norm.L_INFINITY:
-        logger.debug('Creating Upper Limit Variable for the Maximum Error')
+        logger.debug("Creating Upper Limit Variable for the Maximum Error")
         model.T = po.Var(within=po.NonNegativeReals)
 
-        logger.debug('Creating Objective Function to Minimize L_INFINITY Norm of Deviation')
+        logger.debug(
+            "Creating Objective Function to Minimize L_INFINITY Norm of Deviation"
+        )
         model.objective = po.Objective(expr=model.T, sense=po.minimize)
 
-        logger.debug('Creating Constraint to Limit Positive Deviation')
-        model.posDev = po.Constraint(model.N, model.N, rule=lambda m, i, j: deviation(m, i, j) <= m.T)
-        logger.debug('Creating Constraint to Limit Negative Deviation')
-        model.negDev = po.Constraint(model.N, model.N, rule=lambda m, i, j: -m.T <= deviation(m, i, j))
+        logger.debug("Creating Constraint to Limit Positive Deviation")
+        model.posDev = po.Constraint(
+            model.N, model.N, rule=lambda m, i, j: deviation(m, i, j) <= m.T
+        )
+        logger.debug("Creating Constraint to Limit Negative Deviation")
+        model.negDev = po.Constraint(
+            model.N, model.N, rule=lambda m, i, j: -m.T <= deviation(m, i, j)
+        )
     elif norm == Norm.L_1:
-        logger.debug('Creating Upper Limit Variables for the Pointwise Error')
+        logger.debug("Creating Upper Limit Variables for the Pointwise Error")
         model.T = po.Var(model.N, model.N, within=po.NonNegativeReals)
 
-        logger.debug('Creating Objective Function to Minimize L_1 Norm of Deviation')
-        model.objective = po.Objective(expr=sum(model.T[i, j] for j in model.N for i in model.N), sense=po.minimize)
+        logger.debug("Creating Objective Function to Minimize L_1 Norm of Deviation")
+        model.objective = po.Objective(
+            expr=sum(model.T[i, j] for j in model.N for i in model.N), sense=po.minimize
+        )
 
-        logger.debug('Creating Constraint to Limit Positive Deviation')
-        model.posDev = po.Constraint(model.N, model.N, rule=lambda m, i, j: deviation(m, i, j) <= m.T[i, j])
-        logger.debug('Creating Constraint to Limit Negative Deviation')
-        model.negDev = po.Constraint(model.N, model.N, rule=lambda m, i, j: -m.T[i, j] <= deviation(m, i, j))
+        logger.debug("Creating Constraint to Limit Positive Deviation")
+        model.posDev = po.Constraint(
+            model.N, model.N, rule=lambda m, i, j: deviation(m, i, j) <= m.T[i, j]
+        )
+        logger.debug("Creating Constraint to Limit Negative Deviation")
+        model.negDev = po.Constraint(
+            model.N, model.N, rule=lambda m, i, j: -m.T[i, j] <= deviation(m, i, j)
+        )
     elif norm == Norm.L_2:
-        logger.debug('Creating Objective Function to Minimize L_2 Norm of Deviation')
-        model.objective = po.Objective(rule=lambda m: sum(deviation(m, i, j)**2 for j in m.N for i in m.N), sense=po.minimize)
+        logger.debug("Creating Objective Function to Minimize L_2 Norm of Deviation")
+        model.objective = po.Objective(
+            rule=lambda m: sum(deviation(m, i, j) ** 2 for j in m.N for i in m.N),
+            sense=po.minimize,
+        )
     else:
-        raise ValueError(f'Unsupported Norm {norm}.')
+        raise ValueError(f"Unsupported Norm {norm}.")
 
-    logger.debug(f'Finished creation of model in {time.time()-start_time:.2f} seconds.')
+    logger.debug(f"Finished creation of model in {time.time()-start_time:.2f} seconds.")
 
     return model
 
 
 def create_mip_solver(solver: Solver, norm: Norm):
     if solver == Solver.GLPK:
-        solver_factory_params = dict(_name='glpk')
+        solver_factory_params = dict(_name="glpk")
         solver_executable = []
-        solver_options = dict(fpump='')
+        solver_options = dict(fpump="")
         solve_params = dict()
     elif solver == Solver.IPOPT:
-        solver_factory_params = dict(_name='mindtpy')
+        solver_factory_params = dict(_name="mindtpy")
         solver_executable = []
         solver_options = dict()
-        solve_params = dict(mip_solver='glpk', nlp_solver='ipopt')
+        solve_params = dict(mip_solver="glpk", nlp_solver="ipopt")
     elif solver == Solver.SCIP:
-        solver_factory_params = dict(_name='scip')
+        solver_factory_params = dict(_name="scip")
         solver_executable = [
-            'C:/Program Files/SCIPOptSuite 7.0.3/bin/scip',
-            '/Users/m290886/Downloads/SCIPOptSuite-7.0.3-Darwin/bin/scip',
+            "C:/Program Files/SCIPOptSuite 7.0.3/bin/scip",
+            "/Users/m290886/Downloads/SCIPOptSuite-7.0.3-Darwin/bin/scip",
         ]
         solver_options = dict()
         solve_params = dict()
     else:
-        raise ValueError(f'Unsupported solver {solver}')
+        raise ValueError(f"Unsupported solver {solver}")
 
-    logger.debug(f'Creating Solver using params {solver_factory_params}')
+    logger.debug(f"Creating Solver using params {solver_factory_params}")
     ip_solver = po.SolverFactory(**solver_factory_params)
 
     for executable in solver_executable:
@@ -121,7 +146,7 @@ def create_mip_solver(solver: Solver, norm: Norm):
         except ValueError:
             continue
 
-        logger.debug(f'Using Solver Executable {executable}')
+        logger.debug(f"Using Solver Executable {executable}")
         break
 
     ip_solver.options = solver_options
