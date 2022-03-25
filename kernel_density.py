@@ -62,12 +62,3 @@ def bins(matrix: np.ndarray, bandwidth: float, plot=False) -> List[float]:
             ax1.hist(matrix, bins=300)
         plt.show()
     return bins
-
-
-if __name__ == "__main__":
-    with open(
-        "data/two_letter_words_20x10_integers_concurrence_matrix_75.0.pickle", "rb"
-    ) as file:
-        concurrence_matrix = pickle.load(file)
-
-    bins(concurrence_matrix, bandwidth=40)
