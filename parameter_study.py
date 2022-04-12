@@ -502,8 +502,11 @@ def num_generators_contained(
     return len(tmp), all_fundamental_generators_present, group_order
 
 
-if __name__ == "__main__":
+def main(running_as_test, config_name=None, study=None):
+    assert running_as_test or config_name is None
+    global num_columns
     num_columns = 9
+    global expected_permutation_group_order
     expected_permutation_group_order = {
         "20x10": 400,  # 20*10*2
         "15x15_rotations": 900,  # 15*15*4
@@ -515,58 +518,58 @@ if __name__ == "__main__":
         handlers=[logging.StreamHandler(sys.stdout)],
     )
     logger.setLevel(logging.DEBUG)
-    config = configparser.ConfigParser()
-    try:
-        study_name = sys.argv[1]
-    except IndexError:
-        logger.error("Please provide name of testcase")
-        sys.exit(1)
-    job_array_id = (
-        None  # if this is not None, then this current job is part of a job array
-    )
-    job_id_index = (
-        None  # if this is not None, then this current job is part of a job array
-    )
-    try:
-        job_array_id = int(sys.argv[2])
-        job_id_index = int(sys.argv[3])
-        array_task_min = int(sys.argv[4])
-    except IndexError:
-        pass
-    except ValueError as e:
-        logger.error(e)
-        logger.error(
-            "Failed to convert command line arguments to job_array_id, job_id_index and array_task_min."
-        )
-        sys.exit(1)
-    if job_array_id is not None:
-        assert job_id_index is not None
-        jobarray_foldername = f"jobarray_{job_array_id}"
-        if job_id_index == array_task_min:
-            try:
-                os.makedirs(f"parameter_study/results/{jobarray_foldername}")
-            except FileExistsError as e:
-                logger.error(e)
-                logger.error(
-                    "Tried creating a folder for a job array id which already exists. This can't happen on the cluster and"
-                    " is therefore disallowed."
-                )
-                sys.exit(1)
-        filename_xlsx = f"parameter_study/results/{jobarray_foldername}/{study_name}_results_{uuid.uuid4()}.xlsx"
+    global study_name
+    if running_as_test:
+        study_name = study
     else:
-        filename_xlsx = (
-            f"parameter_study/results/{study_name}_results_{uuid.uuid4()}.xlsx"
-        )
-    logger.info(f"Results table will be written to {filename_xlsx}")
-    # config.read(f"parameter_study/parameter_study_{study_name}.ini")
-    config_name = f"parameter_study/parameter_study_{study_name}.ini"
+        try:
+            study_name = sys.argv[1]
+        except IndexError:
+            logger.error("Please provide name of testcase")
+            sys.exit(1)
+        # if these are not None, then this current job is part of a job array
+        job_array_id = None
+        job_id_index = None
+        try:
+            job_array_id = int(sys.argv[2])
+            job_id_index = int(sys.argv[3])
+            array_task_min = int(sys.argv[4])
+        except IndexError:
+            pass
+        except ValueError as e:
+            logger.error(e)
+            logger.error(
+                "Failed to convert command line arguments to job_array_id, job_id_index and array_task_min."
+            )
+            sys.exit(1)
+        if job_array_id is not None:
+            assert job_id_index is not None
+            jobarray_foldername = f"jobarray_{job_array_id}"
+            if job_id_index == array_task_min:
+                try:
+                    os.makedirs(f"parameter_study/results/{jobarray_foldername}")
+                except FileExistsError as e:
+                    logger.error(e)
+                    logger.error(
+                        "Tried creating a folder for a job array id which already exists. This can't happen on the cluster and"
+                        " is therefore disallowed."
+                    )
+                    sys.exit(1)
+            filename_xlsx = f"parameter_study/results/{jobarray_foldername}/{study_name}_results_{uuid.uuid4()}.xlsx"
+        else:
+            filename_xlsx = (
+                f"parameter_study/results/{study_name}_results_{uuid.uuid4()}.xlsx"
+            )
+        logger.info(f"Results table will be written to {filename_xlsx}")
+        config_name = f"parameter_study/parameter_study_{study_name}.ini"
+        if job_array_id is not None and job_array_id == array_task_min:
+            shutil.copy(
+                config_name,
+                f"parameter_study/results/{jobarray_foldername}/parameter_study_{study_name}.ini",
+            )
     with open(config_name, "r") as ini_file:
         print(ini_file.read())
-    if job_array_id is not None and job_array_id == array_task_min:
-        shutil.copy(
-            config_name,
-            f"parameter_study/results/{jobarray_foldername}/parameter_study_{study_name}.ini",
-        )
+    config = configparser.ConfigParser()
     config.read(config_name)
     params = config._sections
 
@@ -580,6 +583,7 @@ if __name__ == "__main__":
         "kde_bandwidths",
         "fault_tolerance_ratios",
     ]
+    global dimensions
     dimensions = None
     parameter_study_results = []
     for testcase, parameters_not_parsed in params.items():
@@ -627,7 +631,7 @@ if __name__ == "__main__":
                     lambda: global_stop_thread,
                 ),
             )
-        if job_array_id is not None:
+        if not running_as_test and job_array_id is not None:
             # If script is part of job array, calculate the corresponding element of the cartesian product of parameters
             # and use it as the parameters instead.
             cartesian_product = tuple(
@@ -703,9 +707,12 @@ if __name__ == "__main__":
     ]
     assert len(columns) == num_columns
     results_dataframe = pd.DataFrame(parameter_study_results, columns=columns)
-    results_dataframe.to_excel(filename_xlsx, engine="xlsxwriter")
+    if running_as_test:
+        return results_dataframe
+    else:
+        results_dataframe.to_excel(filename_xlsx, engine="xlsxwriter")
 
-    if job_array_id is not None:
+    if not running_as_test and job_array_id is not None:
         with open(
             f"parameter_study/results/{jobarray_foldername}/status_finished_{uuid.uuid4()}",
             "w",
@@ -718,3 +725,7 @@ if __name__ == "__main__":
                 file.write(f"result: {parameter_study_results[0][7]}\n")
             except IndexError:
                 file.write(f"result: MIP Timeout without admissible solution")
+
+
+if __name__ == "__main__":
+    main(running_as_test=False, config_name=None)
