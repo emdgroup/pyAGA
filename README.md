@@ -1,45 +1,63 @@
-**Edit a file, create a new file, and clone from Bitbucket in under 2 minutes**
+pyAGA - Find Approximate Graph Automorphisms
+============================================
 
-When you're done, you can delete the content in this README and update the file with details for others getting started with your repository.
+## Publication in <Journal/Conference>
+This software is published as supplementary material to the paper *Unsupervised Learning of Invariance Transformations*
+<INSERT DOI HERE> by the following authors:
 
-*We recommend that you open this README in another tab as you perform the tasks below. You can [watch our video](https://youtu.be/0ocf7u76WSo) for a full demo of all the steps in this tutorial. Open the video in a new tab to avoid leaving Bitbucket.*
+    Aleksandar Vučković
+    Benedikt Stock
+    Alexander V. Hopp
+    Mathias Winkel
+    Helmut Linde
 
----
+Although pyAGA was developed with *Invariance Transformations* in mind, it solves the graph automorphism problem
+independent of the origin of the graph data. The input is a simple adjacency matrix, i.e. the only requirement is that 
+the input matrix is symmetric.
 
-## Edit a file
 
-You’ll start by editing this README file to learn how to edit a file in Bitbucket.
+## Installing Required Python Packages
+Please use Python version 3.6 or later.
+Required packages are listed in `requirements.txt` and can be installed using with `pip install -r requirements.txt`.
 
-1. Click **Source** on the left side.
-2. Click the README.md link from the list of files.
-3. Click the **Edit** button.
-4. Delete the following text: *Delete this line to make a change to the README from Bitbucket.*
-5. After making your change, click **Commit** and then **Commit** again in the dialog. The commit page will open and you’ll see the change you just made.
-6. Go back to the **Source** page.
+## Running the program
+On your command line, just invoke `python main_automorphism_finder.py` to run an example calculation. The
+parameters are set inside the python file. An interactive matplotlib window is opened,
+containing a histogram of the edge weights and the binning edges. The calculation starts after 
+you close this window.
 
----
+To run the test suite, use `python -m unittest test.py`. Note that the last argument is simply `test.py`, *not* 
+`.\test.py` or `./test.py`.
 
-## Create a file
+If you want to run multiple tests with different parameters, consider running the script `parameter_study.py`
+instead by running `python parameter_study.py <testcase>`, where `<testcase>` corresponds to a configuration
+file inside the subdirectory `parameter_study/` called `parameter_study_<testcase>`. 
+An example input file for the `parameter_study`-module is given by:
 
-Next, you’ll add a new file to this repository.
+    [global_timeout]
+    # Time until the entire run is terminated
+    global_timeout = 1000
+    
+    [main]
+    # Maximum time any one iteration can process until it is terminated
+    time_per_iteration = 1000
+    world_name = two_letter_words_20x10
+    integer_matrices = False
+    trafo_round_decimals = None
+    use_integer_programming = True
+    quiet = False
+    norm = Norm.L_INFINITY
+    
+    error_value_limit = 0.01,
+    percentages = 50.0,
+    kde_bandwidths = 3.3e-4,
+    fault_tolerance_ratios = 0.2,
 
-1. Click the **New file** button at the top of the **Source** page.
-2. Give the file a filename of **contributors.txt**.
-3. Enter your name in the empty file space.
-4. Click **Commit** and then **Commit** again in the dialog.
-5. Go back to the **Source** page.
+The bottom four parameters `error_value_limit`, `percentages`, `kde_bandwidths`, and `fault_tolerance_ratios` can be
+simple floats or tuples of floats, in which case the cartesian product of all values will be calculated and the algorithm will be run
+for every element of this cartesian product. The results are then saved to 
+`parameter_study/results/<testcase>_results_<uuid4_string>.xlsx`. The random
+`uuid4_string` is added to prevent accidental overwriting of previously calculated results.
 
-Before you move on, go ahead and explore the repository. You've already seen the **Source** page, but check out the **Commits**, **Branches**, and **Settings** pages.
-
----
-
-## Clone a repository
-
-Use these steps to clone from SourceTree, our client for using the repository command-line free. Cloning allows you to work on your files locally. If you don't yet have SourceTree, [download and install first](https://www.sourcetreeapp.com/). If you prefer to clone from the command line, see [Clone a repository](https://confluence.atlassian.com/x/4whODQ).
-
-1. You’ll see the clone button under the **Source** heading. Click that button.
-2. Now click **Check out in SourceTree**. You may need to create a SourceTree account or log in.
-3. When you see the **Clone New** dialog in SourceTree, update the destination path and name if you’d like to and then click **Clone**.
-4. Open the directory you just created to see your repository’s files.
-
-Now that you're more familiar with your Bitbucket repository, go ahead and add a new file locally. You can [push your change back to Bitbucket with SourceTree](https://confluence.atlassian.com/x/iqyBMg), or you can [add, commit,](https://confluence.atlassian.com/x/8QhODQ) and [push from the command line](https://confluence.atlassian.com/x/NQ0zDQ).
+## License
+<INSERT LICENSE HERE, my suggestion is GPL3 or MIT>
