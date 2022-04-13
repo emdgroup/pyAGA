@@ -43,7 +43,12 @@ def run_parameter_study(
     :param global_timeout: This function passes along a lambda callback to tell this
     thread to terminate.
     """
-    world_name = parameters["world_name"]
+    try:
+        world_name = parameters["world_name"]
+    except KeyError:
+        world_name = None
+        adjacency_matrices = parameters["adjacency_matrices"]
+
     integer_matrices = parameters["integer_matrices"]
     trafo_round_decimals = parameters["trafo_round_decimals"]
     use_integer_programming = parameters["use_integer_programming"]
@@ -59,14 +64,20 @@ def run_parameter_study(
     for error_value_limit in error_value_limits:
         for percentage in percentages:
             if integer_matrices:
-                mat_filename = (
-                    f"data/{world_name}_integers_concurrence_matrix_"
-                    f"{percentage}.pickle"
-                )
+                if world_name is not None:
+                    mat_filename = (
+                        f"data/{world_name}_integers_concurrence_matrix_"
+                        f"{percentage}.pickle"
+                    )
+                else:
+                    mat_filename = f"data/{world_name}_integers_{percentage}.pickle"
             else:
-                mat_filename = (
-                    f"data/{world_name}_concurrence_matrix_{percentage}.pickle"
-                )
+                if world_name is not None:
+                    mat_filename = (
+                        f"data/{world_name}_concurrence_matrix_{percentage}.pickle"
+                    )
+                else:
+                    mat_filename = f"data/{world_name}_{percentage}.pickle"
             with open(mat_filename, "rb") as correlation_matrix_file:
                 logger.info(f"Loading matrix {mat_filename}")
                 correlation_matrix = np.transpose(pickle.load(correlation_matrix_file))
@@ -600,7 +611,7 @@ def main(running_as_test, config_name=None, study=None):
                     parameters_parsed[name] = Norm.L_2
                 else:
                     raise ValueError(f"No valid norm set for testcase {testcase}.")
-            elif name == "world_name":
+            elif name == "world_name" or name == "adjacency_matrices":
                 parameters_parsed[name] = value
             elif name == "dimensions":
                 dimensions = ast.literal_eval(value)
@@ -622,6 +633,16 @@ def main(running_as_test, config_name=None, study=None):
                     logger.error(e)
                     logger.error(f"string was {value}")
                     sys.exit(1)
+
+        if (
+            "world_name" in parameters_parsed
+            and "adjacency_matrices" in parameters_parsed
+        ):
+            raise ValueError(
+                f"Parameter set {testcase}: "
+                f"Please only define either the world_name or adjacency_matrices parameter."
+            )
+
         if not global_stop_thread:
             thread = threading.Thread(
                 target=run_parameter_study,
