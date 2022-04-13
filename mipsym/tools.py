@@ -1,10 +1,9 @@
 import numpy as np
 from typing import Tuple
+from mipsym.mip import Norm
 
 
-def deviation_value(norm: "Norm", P: np.ndarray, A: np.ndarray):
-    from mipsym.mip import Norm
-
+def deviation_value(norm: Norm, P: np.ndarray, A: np.ndarray):
     if norm == Norm.L_INFINITY:
         return np.max(np.abs(P @ A - A @ P))
     elif norm == Norm.L_1:
