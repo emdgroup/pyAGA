@@ -2,7 +2,7 @@ pyAGA - Find Approximate Graph Automorphisms
 ============================================
 
 ## Publication in <Journal/Conference>
-This software is published as supplementary material to the paper *Unsupervised Learning of Invariance Transformations*
+This software is published as supplementary material to the publication *Unsupervised Learning of Invariance Transformations*
 <INSERT DOI HERE> by the following authors:
 
     Aleksandar Vučković
@@ -58,6 +58,7 @@ simple floats or tuples of floats, in which case the cartesian product of all va
 for every element of this cartesian product. The results are then saved to 
 `parameter_study/results/<testcase>_results_<uuid4_string>.xlsx`. The random
 `uuid4_string` is added to prevent accidental overwriting of previously calculated results.
+For a detailed explanation into the consequence of these parameters, we refer to the publication mentioned above.
 
 ## License
 <INSERT LICENSE HERE, my suggestion is GPL3 or MIT>
