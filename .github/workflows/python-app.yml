@@ -20,7 +20,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
       with:
-        name: scipopt/scip
+        repository: scipopt/scip
         ref: refs/tags/v703
     - name: Build SCIP
       run: |
