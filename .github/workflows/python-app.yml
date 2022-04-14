@@ -18,21 +18,78 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout pyAGA
+      uses: actions/checkout@v3
       with:
+        path: pyAGA/
+    - name: Checkout SCIP 7.0.3
+      uses: actions/checkout@v3
+      with:
+        path: scip/
         repository: scipopt/scip
         ref: refs/tags/v703
-    - name: ls
+    - name: Checkout PaPILO 1.0.2
+      uses: actions/checkout@v3
+      with:
+        path: papilo/
+        repository: scipopt/papilo
+        ref: refs/tags/v1.0.2
+    - name: Checkout SoPlex 5.0.2
+      uses: actions/checkout@v3
+      with:
+        path: soplex/
+        repository: scipopt/soplex
+        ref: refs/tags/release-502
+    - name: Checkout Ipopt
+      uses: actions/checkout@v3
+      with:
+        path: Ipopt/
+        repository: coin-or/Ipopt
+        ref: refs/tags/releases/3.12.9
+    - name: Checkout bliss
+      uses: actions/checkout@v3
+      with:
+        path: bliss/
+        repository: ds4dm/bliss
+        ref: refs/tags/v0.73.3
+    - name: Build and install Ipopt
       run: |
-        ls
-    - name: Build SCIP
-      run: |
-        tar xvzf scip-703.tgz                                                       
-        cd scip-703                                                                 
-        mkdir build                                                                   
-        cd build                                                                      
-        cmake .. -DCMAKE_INSTALL_PREFIX=<install/dir> [-DSOPLEX_DIR=/path/to/soplex]  
+        cd Ipopt 
+        ./configure
         make
+        sudo make install
+        cd ..
+    - name: Build an install bliss
+      run: |
+        cd bliss
+        cmake .
+        make
+        sudo make install
+        cd ..
+    - name: ls
+      run: ls
+    - name: Install C++ Boost (needed for PaPILO)
+      run: sudo apt-get install libboost-all-dev  
+    - name: Build PaPILO
+      run: |      
+        cd papilo                                                                     
+        cmake .
+        make
+        sudo make install
+        cd ..
+    - name: Build SoPlex
+      run: |
+        cd soplex
+        cmake .
+        make
+        sudo make install
+        cd ..
+    - name: Build SCIP
+      run: |                                                              
+        cd scip                                                          
+        cmake -DZIMPL=off -DIPOPT=off .
+        make
+        sudo make install
     - name: Set up Python 3.10
       uses: actions/setup-python@v3
       with:
