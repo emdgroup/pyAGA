@@ -19,6 +19,17 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+      with:
+        name: scipopt/scip
+        ref: refs/tags/v703
+    - name: Build SCIP
+      run: |
+        tar xvzf scip-703.tgz                                                       
+        cd scip-703                                                                 
+        mkdir build                                                                   
+        cd build                                                                      
+        cmake .. -DCMAKE_INSTALL_PREFIX=<install/dir> [-DSOPLEX_DIR=/path/to/soplex]  
+        make
     - name: Set up Python 3.10
       uses: actions/setup-python@v3
       with:
