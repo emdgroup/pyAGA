@@ -40,25 +40,12 @@ jobs:
         path: soplex/
         repository: scipopt/soplex
         ref: refs/tags/release-502
-    - name: Checkout Ipopt
-      uses: actions/checkout@v3
-      with:
-        path: Ipopt/
-        repository: coin-or/Ipopt
-        ref: refs/tags/releases/3.12.9
     - name: Checkout bliss
       uses: actions/checkout@v3
       with:
         path: bliss/
         repository: ds4dm/bliss
         ref: refs/tags/v0.73.3
-    - name: Build and install Ipopt
-      run: |
-        cd Ipopt 
-        ./configure
-        make
-        sudo make install
-        cd ..
     - name: Build an install bliss
       run: |
         cd bliss
@@ -72,7 +59,7 @@ jobs:
       run: sudo apt-get install libboost-all-dev  
     - name: Build PaPILO
       run: |      
-        cd papilo                                                                     
+        cd papilo
         cmake .
         make
         sudo make install
@@ -86,7 +73,7 @@ jobs:
         cd ..
     - name: Build SCIP
       run: |                                                              
-        cd scip                                                          
+        cd scip
         cmake -DZIMPL=off -DIPOPT=off .
         make
         sudo make install
@@ -98,12 +85,13 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install flake8
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        if [ -f pyAGA/requirements.txt ]; then pip install -r pyAGA/requirements.txt; fi
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        # flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with unittest
       run: |
-        python -m unittest test.py
+        cd pyAGA/
+        python -m unittest test_short.py
