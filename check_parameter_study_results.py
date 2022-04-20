@@ -55,8 +55,10 @@ for status_file in glob.glob(f"{jobarray_dirname}/status_finished*"):
             color = "black"
         elif result == "too few":
             color = "red"
-        elif result == "Timeout":
+        elif result == "exact (Timeout)":
             color = "purple"
+        elif result == "too few (Timeout)":
+            color = "pink"
         else:
             assert False
         ax.plot(params[1], params[3], marker="o", color=color)
