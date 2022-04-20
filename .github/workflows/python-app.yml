@@ -8,6 +8,7 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -17,14 +18,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Restore_from_cache_if_available
+    - name: ls
+      run: ls
+    - name: Restore SCIP and dependencies from cache, if available
       id: restore_cache
       uses: actions/cache@v3
       with:
-        path: .
-        key: ${{ runner.os }}-build_cache
+        path: ${{ github.workspace }}/install
+        key: ${{ runner.os }}-build_scip_cache_4
+    - name: ls & pwd
+      run: |
+        ls
+        pwd
     - name: Checkout pyAGA
-      if: steps.restore_cache.outputs.cache-hit != 'true'
       uses: actions/checkout@v3
       with:
         path: pyAGA/
@@ -59,41 +65,53 @@ jobs:
     - name: Build an install bliss
       if: steps.restore_cache.outputs.cache-hit != 'true'
       run: |
-        cd bliss
-        cmake .
-        make
-        sudo make install
-        cd ..
+        pushd bliss
+        cmake -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/install .
+        make -j
+        make install
+        popd
     - name: ls
-      run: ls
+      run: |
+        ls
+        pwd
     - name: Install C++ Boost (needed for PaPILO)
       run: sudo apt-get install libboost-all-dev  
     - name: Build PaPILO
+      if: steps.restore_cache.outputs.cache-hit != 'true'
       run: |      
-        cd papilo
-        cmake .
+        pushd papilo
+        cmake -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/install .
         make
-        sudo make install
-        cd ..
+        make install
+        popd
     - name: Build SoPlex
       if: steps.restore_cache.outputs.cache-hit != 'true'
       run: |
-        cd soplex
-        cmake .
-        make
-        sudo make install
-        cd ..
+        pushd soplex
+        cmake -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/install .
+        make -j
+        make install
+        popd
     - name: Build SCIP
       if: steps.restore_cache.outputs.cache-hit != 'true'
       run: |                                                              
-        cd scip
-        cmake -DZIMPL=off -DIPOPT=off .
-        make
-        sudo make install
+        pushd scip
+        cmake -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/install -DZIMPL=off -DIPOPT=off -DSOPLEX_DIR=${{ github.workspace }}/install \
+        -DPAPILO_DIR=${{ github.workspace }}/install -DBLISS_DIR=${{ github.workspace }}/install .
+        make -j
+        make install
+        popd
+    - name: Add all programs to path
+      run: echo "$GITHUB_WORKSPACE/install/bin" >> $GITHUB_PATH
     - name: Set up Python 3.10
       uses: actions/setup-python@v3
       with:
         python-version: "3.10"
+    - name: ls & pwd
+      run: |
+        ls
+        pwd
+        ls ${{ github.workspace }}/install/bin
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
@@ -108,3 +126,9 @@ jobs:
       run: |
         cd pyAGA/
         python -m unittest test_short.py
+    - name : ls & pwd
+      run: |
+        ls
+        pwd
+        echo ${{ github.workspace }}
+        
