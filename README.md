@@ -8,7 +8,7 @@ Required packages are listed in `requirements.txt` and can be installed using wi
 ## Running the program
 On your command line, just invoke `python main_automorphism_finder.py` to run an example calculation. The
 parameters are set inside the python file. An interactive matplotlib window is opened,
-containing a histogram of the edge weights and the binning edges. The calculation starts after 
+containing a histogram of the edge weights and the bins. The calculation starts after 
 you close this window.
 
 To run the test suite, use `python -m unittest test.py`. Note that the last argument is simply `test.py`, *not* 
@@ -26,6 +26,7 @@ An example input file for the `parameter_study`-module is given by:
     [main]
     # Maximum time any one iteration can process until it is terminated
     time_per_iteration = 1000
+    # The prefix of the matrices used in 
     world_name = two_letter_words_20x10
     integer_matrices = False
     trafo_round_decimals = None
@@ -44,6 +45,3 @@ for every element of this cartesian product. The results are then saved to
 `parameter_study/results/<testcase>_results_<uuid4_string>.xlsx`. The random
 `uuid4_string` is added to prevent accidental overwriting of previously calculated results.
 For a detailed explanation into the consequence of these parameters, we refer to the publication mentioned above.
-
-## License
-<INSERT LICENSE HERE, my suggestion is GPL3 or MIT>
