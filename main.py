@@ -15,18 +15,16 @@ from automorphism_finder import find_automorphisms
 from permutation_group_utils import find_simple_generators
 
 
-# Set the parameters of the calculation
+# Set the parameters of the calculation.
 # Choose which testcase to run. This testcase corresponds to the world with dimensions 15x15, where letters with
 # horizontal or vertical axial symmetries have been removed.
 world_name = "two_letter_words_20x10"
 # This parameter corresponds to the percentage of unique observations present for the calculation of the concurrence matrix.
 percentage = "75.0"
-trafo_round_decimals = None
 # The fault tolerance ratio corresponds to the maximum ratio of nodes for which we accept that no mapping exists.
 trafo_fault_tolerance_ratio = 0.15
 # The bandwidth is the parameter of the kernel density estimation, controlling the number and width of the bins.
 kde_bandwidth = 3.3e-4
-use_integer_programming = True
 # With this parameter, you can mute some terminal outputs.
 quiet = False
 # Select the norm which will be used to measure the quality / the "error" of the found permutations.
@@ -64,12 +62,12 @@ with open(mat_filename, "rb") as correlation_matrix_file:
     trafos, num_MIP_calls = find_automorphisms(
         correlation_matrix,
         fault_tolerance=int(trafo_fault_tolerance_ratio * num_variables),
-        round_decimals=trafo_round_decimals,
+        round_decimals=None,
         quiet=quiet,
         bandwidth=kde_bandwidth,
         norm=norm,
         error_value_limit=error_value_limit,
-        use_integer_programming=use_integer_programming,
+        use_integer_programming=True,
     )
 
 if not quiet:
