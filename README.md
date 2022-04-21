@@ -1,21 +1,6 @@
 pyAGA - Find Approximate Graph Automorphisms
 ============================================
 
-## Publication in <Journal/Conference>
-This software is published as supplementary material to the publication *Unsupervised Learning of Invariance Transformations*
-<INSERT DOI HERE> by the following authors:
-
-    Aleksandar Vučković
-    Benedikt Stock
-    Alexander V. Hopp
-    Mathias Winkel
-    Helmut Linde
-
-Although pyAGA was developed with *Invariance Transformations* in mind, it solves the graph automorphism problem
-independent of the origin of the graph data. The input is a simple adjacency matrix, i.e. the only requirement is that 
-the input matrix is symmetric.
-
-
 ## Installing Required Python Packages
 Please use Python version 3.6 or later.
 Required packages are listed in `requirements.txt` and can be installed using with `pip install -r requirements.txt`.
