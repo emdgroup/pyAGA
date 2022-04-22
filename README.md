@@ -43,12 +43,14 @@ An example configuration file for the `calculate_automorphisms`-module is given 
     world_name = two_letter_words_20x10
     
     error_value_limits = 0.01
-    percentages = 50.0, 60.0
+    percentages = 50.0
     kde_bandwidths = 3.3e-4
-    fault_tolerance_ratios = 0.2
+    fault_tolerance_ratios = 0.2, 0.25
 
-This configuration is identical to the configuration in the file calculations/short_test.ini, therefore to run it you 
-need to use `python calculate_automorphisms.py short_test` .
+This configuration is identical to the configuration in the file `calculations/short_test.ini`, therefore to run it you 
+need to use `python calculate_automorphisms.py short_test`. This will run for approximately 11-12 minutes and yield that
+with the fault tolerance of 20%, we only find 20 automorphisms, while a fault tolerance of 25% allows us to find 
+all 400 expected automorphisms.
 
 The bottom four parameters `error_value_limits`, `percentages`, `kde_bandwidths`, and `fault_tolerance_ratios` can be
 simple floats or tuples of floats, in which case the cartesian product of all values will be calculated and the algorithm will be run
