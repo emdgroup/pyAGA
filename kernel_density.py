@@ -48,6 +48,7 @@ def bins(matrix: np.ndarray, bandwidth: float, plot=False) -> List[float]:
         fig, ax = plt.subplots(nrows=2, sharex=True)
         ax0, ax1 = ax
         ax0.set_xlabel("concurrence $\langle x_1 x_2 \\rangle$")
+        ax1.set_xlabel("concurrence $\langle x_1 x_2 \\rangle$")
         ax0.set_ylabel("value density $\\rho$")
         ax1.set_ylabel("value frequency")
         ax0.plot(plot_x, y)
