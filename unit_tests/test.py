@@ -12,7 +12,7 @@ class MainTest(unittest.TestCase):
         Results from this world have been published in the corresponding submission.
         :return:
         """
-        config_name = "calculations/test_config_files/success_T_world.ini"
+        config_name = "unit_tests/test_config_files/success_T_world.ini"
         results_df: pd.DataFrame = calculate_automorphisms.main(
             running_as_test=True, config_name=config_name, study="20x10"
         )
@@ -26,7 +26,7 @@ class MainTest(unittest.TestCase):
         Results from this world have been published in the corresponding submission.
         :return:
         """
-        config_name = "calculations/test_config_files/success_TR1_world.ini"
+        config_name = "unit_tests/test_config_files/success_TR1_world.ini"
         results_df: pd.DataFrame = calculate_automorphisms.main(
             running_as_test=True, config_name=config_name, study="15x15_rotations"
         )
@@ -41,7 +41,7 @@ class MainTest(unittest.TestCase):
         Results from this world have been published in the corresponding submission.
         :return:
         """
-        config_name = "calculations/test_config_files/success_TR2_world.ini"
+        config_name = "unit_tests/test_config_files/success_TR2_world.ini"
         results_df: pd.DataFrame = calculate_automorphisms.main(
             running_as_test=True,
             config_name=config_name,
@@ -57,7 +57,7 @@ class MainTest(unittest.TestCase):
         Results from this world have been published in the corresponding submission.
         :return:
         """
-        config_name = "calculations/test_config_files/failure_T_world.ini"
+        config_name = "unit_tests/test_config_files/failure_T_world.ini"
         results_df: pd.DataFrame = calculate_automorphisms.main(
             running_as_test=True, config_name=config_name, study="20x10"
         )
@@ -71,7 +71,7 @@ class MainTest(unittest.TestCase):
         Results from this world have been published in the corresponding submission.
         :return:
         """
-        config_name = "calculations/test_config_files/failure_TR1_world.ini"
+        config_name = "unit_tests/test_config_files/failure_TR1_world.ini"
         results_df: pd.DataFrame = calculate_automorphisms.main(
             running_as_test=True, config_name=config_name, study="15x15_rotations"
         )
@@ -86,7 +86,7 @@ class MainTest(unittest.TestCase):
         Results from this world have been published in the corresponding submission.
         :return:
         """
-        config_name = "calculations/test_config_files/failure_TR2_world.ini"
+        config_name = "unit_tests/test_config_files/failure_TR2_world.ini"
         results_df: pd.DataFrame = calculate_automorphisms.main(
             running_as_test=True,
             config_name=config_name,

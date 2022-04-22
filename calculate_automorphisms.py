@@ -70,7 +70,9 @@ def run_parameter_study(
                         f"{percentage}.pickle"
                     )
                 else:
-                    mat_filename = f"data/{adjacency_matrices}_integers_{percentage}.pickle"
+                    mat_filename = (
+                        f"data/{adjacency_matrices}_integers_{percentage}.pickle"
+                    )
             else:
                 if world_name is not None:
                     mat_filename = (
@@ -601,6 +603,16 @@ def main(running_as_test, config_name=None, study=None):
         if testcase == "global_timeout":
             continue
         parameters_parsed = {}
+        default_values = {
+            "integer_matrices": False,
+            "trafo_round_decimals": None,
+            "use_integer_programming": True,
+            "quiet": False,
+            "norm": Norm.L_INFINITY,
+        }
+        for key, value in default_values.items():
+            if key not in parameters_not_parsed:
+                parameters_parsed[key] = value
         for name, value in parameters_not_parsed.items():
             if name == "norm":
                 if value == "Norm.L_INFINITY":
@@ -666,7 +678,7 @@ def main(running_as_test, config_name=None, study=None):
             if job_id_index == array_task_min:
                 for element in cartesian_product:
                     with open(
-                            f"calculations/results/{jobarray_foldername}/status_todo_{uuid.uuid4()}",
+                        f"calculations/results/{jobarray_foldername}/status_todo_{uuid.uuid4()}",
                         "w",
                     ) as file:
                         file.write(datetime.datetime.now().isoformat() + "\n")
@@ -676,7 +688,7 @@ def main(running_as_test, config_name=None, study=None):
 
             product_element = cartesian_product[job_id_index]
             with open(
-                    f"calculations/results/{jobarray_foldername}/status_started_{uuid.uuid4()}",
+                f"calculations/results/{jobarray_foldername}/status_started_{uuid.uuid4()}",
                 "w",
             ) as file:
                 file.write(datetime.datetime.now().isoformat() + "\n")
@@ -735,7 +747,7 @@ def main(running_as_test, config_name=None, study=None):
 
     if not running_as_test and job_array_id is not None:
         with open(
-                f"calculations/results/{jobarray_foldername}/status_finished_{uuid.uuid4()}",
+            f"calculations/results/{jobarray_foldername}/status_finished_{uuid.uuid4()}",
             "w",
         ) as file:
             file.write(datetime.datetime.now().isoformat() + "\n")

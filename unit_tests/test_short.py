@@ -13,7 +13,7 @@ class MainTest(unittest.TestCase):
         :return:
         """
         config_name = (
-            "calculations/test_config_files/success_T_world.ini"
+            "unit_tests/test_config_files/success_T_world.ini"
         )
         results_df: pd.DataFrame = calculate_automorphisms.main(
             running_as_test=True, config_name=config_name, study="20x10"
@@ -29,7 +29,7 @@ class MainTest(unittest.TestCase):
         :return:
         """
         config_name = (
-            "calculations/test_config_files/failure_T_world.ini"
+            "unit_tests/test_config_files/failure_T_world.ini"
         )
         results_df: pd.DataFrame = calculate_automorphisms.main(
             running_as_test=True, config_name=config_name, study="20x10"
