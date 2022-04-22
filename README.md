@@ -47,6 +47,8 @@ An example configuration file for the `calculate_automorphisms`-module is given 
     kde_bandwidths = 3.3e-4
     fault_tolerance_ratios = 0.2
 
+This configuration is identical to the configuration in the file calculations/short_test.ini, therefore to run it you 
+need to use `python calculate_automorphisms.py short_test` .
 
 The bottom four parameters `error_value_limits`, `percentages`, `kde_bandwidths`, and `fault_tolerance_ratios` can be
 simple floats or tuples of floats, in which case the cartesian product of all values will be calculated and the algorithm will be run
