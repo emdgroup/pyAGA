@@ -522,6 +522,7 @@ def main(running_as_test, config_name=None, study=None):
     global expected_permutation_group_order
     expected_permutation_group_order = {
         "20x10": 400,  # 20*10*2
+        "20x10_short_test": 400,
         "15x15_rotations": 900,  # 15*15*4
         "no_axsym_15x15_rotations": 900,
         "13x7_letters_indiv_colors": 1092,  # 13*7*6*2
