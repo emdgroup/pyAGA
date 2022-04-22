@@ -47,8 +47,8 @@ An example configuration file for the `calculate_automorphisms`-module is given 
     kde_bandwidths = 3.3e-4
     fault_tolerance_ratios = 0.2, 0.25
 
-This configuration is identical to the configuration in the file `calculations/short_test.ini`, therefore to run it you 
-need to use `python calculate_automorphisms.py short_test`. This will run for approximately 11-12 minutes and yield that
+This configuration is identical to the configuration in the file `calculations/20x10_short_test.ini`, therefore to run it you 
+need to use `python calculate_automorphisms.py 20x10_short_test`. This will run for approximately 11-12 minutes and yield that
 with the fault tolerance of 20%, we only find 20 automorphisms, while a fault tolerance of 25% allows us to find 
 all 400 expected automorphisms.
 
