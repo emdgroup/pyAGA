@@ -3,7 +3,7 @@ pyAGA - Find Approximate Graph Automorphisms
 
 ## Installing Required Python Packages
 Please use Python version 3.6 or later.
-Required packages are listed in `requirements.txt` and can be installed using with `pip install -r requirements.txt`.
+Required packages are listed in `requirements.txt` and can be installed with `pip install -r requirements.txt`.
 
 ## Installing SCIP
 To run pyAGA, please install the SCIP optimization suite version 7.0.3 from https://www.scipopt.org/, 
