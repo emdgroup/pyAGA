@@ -70,14 +70,14 @@ def run_parameter_study(
                         f"{percentage}.pickle"
                     )
                 else:
-                    mat_filename = f"data/{world_name}_integers_{percentage}.pickle"
+                    mat_filename = f"data/{adjacency_matrices}_integers_{percentage}.pickle"
             else:
                 if world_name is not None:
                     mat_filename = (
                         f"data/{world_name}_concurrence_matrix_{percentage}.pickle"
                     )
                 else:
-                    mat_filename = f"data/{world_name}_{percentage}.pickle"
+                    mat_filename = f"data/{adjacency_matrices}_{percentage}.pickle"
             with open(mat_filename, "rb") as correlation_matrix_file:
                 logger.info(f"Loading matrix {mat_filename}")
                 correlation_matrix = np.transpose(pickle.load(correlation_matrix_file))
@@ -401,7 +401,7 @@ def num_generators_contained(
     fundamental_generators = []
     if dimensions is None:
         num_horizontal_pixels, num_vertical_pixels = map(
-            # study_name is the argument passed to parameter_study
+            # study_name is the argument passed to calculations
             # e.g. if study_name == "10x5", then the first split just turns it into ["10x5"]
             # otherwise if the parameter is a longer study_name seperated by "_", the rest
             # is discarded
@@ -558,7 +558,7 @@ def main(running_as_test, config_name=None, study=None):
             jobarray_foldername = f"jobarray_{job_array_id}"
             if job_id_index == array_task_min:
                 try:
-                    os.makedirs(f"parameter_study/results/{jobarray_foldername}")
+                    os.makedirs(f"calculations/results/{jobarray_foldername}")
                 except FileExistsError as e:
                     logger.error(e)
                     logger.error(
@@ -566,17 +566,17 @@ def main(running_as_test, config_name=None, study=None):
                         " is therefore disallowed."
                     )
                     sys.exit(1)
-            filename_xlsx = f"parameter_study/results/{jobarray_foldername}/{study_name}_results_{uuid.uuid4()}.xlsx"
+            filename_xlsx = f"calculations/results/{jobarray_foldername}/{study_name}_results_{uuid.uuid4()}.xlsx"
         else:
             filename_xlsx = (
-                f"parameter_study/results/{study_name}_results_{uuid.uuid4()}.xlsx"
+                f"calculations/results/{study_name}_results_{uuid.uuid4()}.xlsx"
             )
         logger.info(f"Results table will be written to {filename_xlsx}")
-        config_name = f"parameter_study/parameter_study_{study_name}.ini"
+        config_name = f"calculations/{study_name}.ini"
         if job_array_id is not None and job_array_id == array_task_min:
             shutil.copy(
                 config_name,
-                f"parameter_study/results/{jobarray_foldername}/parameter_study_{study_name}.ini",
+                f"calculations/results/{jobarray_foldername}/{study_name}.ini",
             )
     with open(config_name, "r") as ini_file:
         print(ini_file.read())
@@ -666,7 +666,7 @@ def main(running_as_test, config_name=None, study=None):
             if job_id_index == array_task_min:
                 for element in cartesian_product:
                     with open(
-                        f"parameter_study/results/{jobarray_foldername}/status_todo_{uuid.uuid4()}",
+                            f"calculations/results/{jobarray_foldername}/status_todo_{uuid.uuid4()}",
                         "w",
                     ) as file:
                         file.write(datetime.datetime.now().isoformat() + "\n")
@@ -676,7 +676,7 @@ def main(running_as_test, config_name=None, study=None):
 
             product_element = cartesian_product[job_id_index]
             with open(
-                f"parameter_study/results/{jobarray_foldername}/status_started_{uuid.uuid4()}",
+                    f"calculations/results/{jobarray_foldername}/status_started_{uuid.uuid4()}",
                 "w",
             ) as file:
                 file.write(datetime.datetime.now().isoformat() + "\n")
@@ -735,7 +735,7 @@ def main(running_as_test, config_name=None, study=None):
 
     if not running_as_test and job_array_id is not None:
         with open(
-            f"parameter_study/results/{jobarray_foldername}/status_finished_{uuid.uuid4()}",
+                f"calculations/results/{jobarray_foldername}/status_finished_{uuid.uuid4()}",
             "w",
         ) as file:
             file.write(datetime.datetime.now().isoformat() + "\n")

@@ -2,7 +2,7 @@ import unittest
 
 import pandas as pd
 
-import parameter_study
+import calculate_automorphisms
 
 
 class MainTest(unittest.TestCase):
@@ -12,10 +12,8 @@ class MainTest(unittest.TestCase):
         Results from this world have been published in the corresponding submission.
         :return:
         """
-        config_name = (
-            "parameter_study/test_config_files/parameter_study_success_T_world.ini"
-        )
-        results_df: pd.DataFrame = parameter_study.main(
+        config_name = "calculations/test_config_files/success_T_world.ini"
+        results_df: pd.DataFrame = calculate_automorphisms.main(
             running_as_test=True, config_name=config_name, study="20x10"
         )
         self.assertEqual(1, results_df.shape[0])
@@ -28,10 +26,8 @@ class MainTest(unittest.TestCase):
         Results from this world have been published in the corresponding submission.
         :return:
         """
-        config_name = (
-            "parameter_study/test_config_files/parameter_study_success_TR1_world.ini"
-        )
-        results_df: pd.DataFrame = parameter_study.main(
+        config_name = "calculations/test_config_files/success_TR1_world.ini"
+        results_df: pd.DataFrame = calculate_automorphisms.main(
             running_as_test=True, config_name=config_name, study="15x15_rotations"
         )
         self.assertEqual(1, results_df.shape[0])
@@ -45,10 +41,8 @@ class MainTest(unittest.TestCase):
         Results from this world have been published in the corresponding submission.
         :return:
         """
-        config_name = (
-            "parameter_study/test_config_files/parameter_study_success_TR2_world.ini"
-        )
-        results_df: pd.DataFrame = parameter_study.main(
+        config_name = "calculations/test_config_files/success_TR2_world.ini"
+        results_df: pd.DataFrame = calculate_automorphisms.main(
             running_as_test=True,
             config_name=config_name,
             study="no_axsym_15x15_rotations",
@@ -63,10 +57,8 @@ class MainTest(unittest.TestCase):
         Results from this world have been published in the corresponding submission.
         :return:
         """
-        config_name = (
-            "parameter_study/test_config_files/parameter_study_failure_T_world.ini"
-        )
-        results_df: pd.DataFrame = parameter_study.main(
+        config_name = "calculations/test_config_files/failure_T_world.ini"
+        results_df: pd.DataFrame = calculate_automorphisms.main(
             running_as_test=True, config_name=config_name, study="20x10"
         )
         self.assertEqual(1, results_df.shape[0])
@@ -79,10 +71,8 @@ class MainTest(unittest.TestCase):
         Results from this world have been published in the corresponding submission.
         :return:
         """
-        config_name = (
-            "parameter_study/test_config_files/parameter_study_failure_TR1_world.ini"
-        )
-        results_df: pd.DataFrame = parameter_study.main(
+        config_name = "calculations/test_config_files/failure_TR1_world.ini"
+        results_df: pd.DataFrame = calculate_automorphisms.main(
             running_as_test=True, config_name=config_name, study="15x15_rotations"
         )
         self.assertEqual(1, results_df.shape[0])
@@ -96,10 +86,8 @@ class MainTest(unittest.TestCase):
         Results from this world have been published in the corresponding submission.
         :return:
         """
-        config_name = (
-            "parameter_study/test_config_files/parameter_study_failure_TR2_world.ini"
-        )
-        results_df: pd.DataFrame = parameter_study.main(
+        config_name = "calculations/test_config_files/failure_TR2_world.ini"
+        results_df: pd.DataFrame = calculate_automorphisms.main(
             running_as_test=True,
             config_name=config_name,
             study="no_axsym_15x15_rotations",
@@ -109,5 +97,5 @@ class MainTest(unittest.TestCase):
         self.assertFalse(results_df["fundamental_generators_contained"].iloc[0])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
