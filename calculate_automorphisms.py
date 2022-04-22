@@ -743,6 +743,7 @@ def main(running_as_test, config_name=None, study=None):
     if running_as_test:
         return results_dataframe
     else:
+        os.makedirs("calculations/results", exist_ok=True)
         results_dataframe.to_excel(filename_xlsx, engine="xlsxwriter")
 
     if not running_as_test and job_array_id is not None:
