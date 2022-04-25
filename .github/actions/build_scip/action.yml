@@ -74,7 +74,7 @@ runs:
         mkdir -p "${{ inputs.work-prefix }}/build/papilo"
         pushd "${{ inputs.work-prefix }}/build/papilo"
         cmake -DCMAKE_INSTALL_PREFIX="${{ inputs.install-prefix }}" "${{ inputs.work-prefix }}/source/papilo"
-        make -j
+        make
         make install
         popd
 
