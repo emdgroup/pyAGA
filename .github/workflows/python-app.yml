@@ -13,110 +13,47 @@ on:
 permissions:
   contents: read
 
+env:
+    # installation directory for scip
+    SCIP_INSTALL_PREFIX: ${{ github.workspace }}/install
+
 jobs:
   build_and_test_ubuntu:
     runs-on: ubuntu-latest
 
     steps:
-    - name: ls
-      run: ls
-    - name: Restore SCIP and dependencies from cache, if available
-      id: restore_cache
-      uses: actions/cache@v3
-      with:
-        path: ${{ github.workspace }}/install
-        key: ${{ runner.os }}-build_scip_cache_4
-    - name: ls & pwd
-      run: |
-        ls
-        pwd
     - name: Checkout pyAGA
       uses: actions/checkout@v3
       with:
         path: pyAGA/
-    - name: Checkout SCIP 7.0.3
-      if: steps.restore_cache.outputs.cache-hit != 'true'
-      uses: actions/checkout@v3
+
+    - name: Restore SCIP and dependencies from cache, if available
+      id: restore_cache
+      uses: actions/cache@v3
       with:
-        path: scip/
-        repository: scipopt/scip
-        ref: refs/tags/v703
-    - name: Checkout PaPILO 1.0.2
+        path: ${{ env.SCIP_INSTALL_PREFIX }}
+        key: ${{ runner.os }}-build_scip_cache_5
+
+    - name: Build SCIP 7.0.3 and dependencies
       if: steps.restore_cache.outputs.cache-hit != 'true'
-      uses: actions/checkout@v3
+      uses: ./pyAGA/.github/actions/build_scip
       with:
-        path: papilo/
-        repository: scipopt/papilo
-        ref: refs/tags/v1.0.2
-    - name: Checkout SoPlex 5.0.2
-      if: steps.restore_cache.outputs.cache-hit != 'true'
-      uses: actions/checkout@v3
-      with:
-        path: soplex/
-        repository: scipopt/soplex
-        ref: refs/tags/release-502
-    - name: Checkout bliss
-      if: steps.restore_cache.outputs.cache-hit != 'true'
-      uses: actions/checkout@v3
-      with:
-        path: bliss/
-        repository: ds4dm/bliss
-        ref: refs/tags/v0.73.3
-    - name: Build an install bliss
-      if: steps.restore_cache.outputs.cache-hit != 'true'
-      run: |
-        pushd bliss
-        cmake -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/install .
-        make -j
-        make install
-        popd
-    - name: ls
-      run: |
-        ls
-        pwd
-    - name: Install C++ Boost (needed for PaPILO)
-      run: sudo apt-get install libboost-all-dev  
-    - name: Build PaPILO
-      if: steps.restore_cache.outputs.cache-hit != 'true'
-      run: |      
-        pushd papilo
-        cmake -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/install .
-        make
-        make install
-        popd
-    - name: Build SoPlex
-      if: steps.restore_cache.outputs.cache-hit != 'true'
-      run: |
-        pushd soplex
-        cmake -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/install .
-        make -j
-        make install
-        popd
-    - name: Build SCIP
-      if: steps.restore_cache.outputs.cache-hit != 'true'
-      run: |                                                              
-        pushd scip
-        cmake -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/install -DZIMPL=off -DIPOPT=off -DSOPLEX_DIR=${{ github.workspace }}/install \
-        -DPAPILO_DIR=${{ github.workspace }}/install -DBLISS_DIR=${{ github.workspace }}/install .
-        make -j
-        make install
-        popd
+        install-prefix: ${{ env.SCIP_INSTALL_PREFIX }}
+
     - name: Add all programs to path
-      run: echo "$GITHUB_WORKSPACE/install/bin" >> $GITHUB_PATH
+      run: echo "${{ env.SCIP_INSTALL_PREFIX }}/bin" >> $GITHUB_PATH
+
     - name: Set up Python 3.10
       uses: actions/setup-python@v3
       with:
         python-version: "3.10"
-    - name: ls & pwd
-      run: |
-        ls
-        pwd
-        ls ${{ github.workspace }}/install/bin
-    - name: Install dependencies
+
+    - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
         pip install flake8
         if [ -f pyAGA/requirements.txt ]; then pip install -r pyAGA/requirements.txt; fi
+
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
@@ -124,11 +61,6 @@ jobs:
         # flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with unittest
       run: |
-        cd pyAGA/
+        pushd pyAGA/
         python -m unittest unit_tests/test_short.py
-    - name : ls & pwd
-      run: |
-        ls
-        pwd
-        echo ${{ github.workspace }}
-        
+        popd

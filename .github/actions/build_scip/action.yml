@@ -1,0 +1,96 @@
+name: 'Configure, Build, and Install LLVM and Clang'
+description: 'Action that sets up the toolchain needed'
+inputs:
+  work-prefix:
+    description: 'Prefix for the working directory'
+    required: true
+    default: ${{ github.workspace }}/tools
+  install-prefix:
+    description: 'Installation target directory for SCIP'
+    required: true
+    # default: ${{ github.workspace }}/tools/install
+
+runs:
+  using: "composite"
+  steps:
+    - name: Create Directory Structure
+      shell: bash
+      run: |
+        mkdir -p "${{ inputs.work-prefix }}/source"
+        mkdir -p "${{ inputs.work-prefix }}/build"
+        mkdir -p "${{ inputs.install-prefix }}"
+
+    - name: Checkout SCIP 7.0.3
+      shell: bash
+      run: |
+        git clone -b v703 --depth 1 https://github.com/scipopt/scip.git "${{ inputs.work-prefix }}/source/scip"
+
+    - name: Checkout PaPILO 1.0.2
+      shell: bash
+      run: |
+        git clone -b v1.0.2 --depth 1 https://github.com/scipopt/papilo.git "${{ inputs.work-prefix }}/source/papilo"
+
+    - name: Checkout SoPlex 5.0.2
+      shell: bash
+      run: |
+        git clone -b release-502 --depth 1 https://github.com/scipopt/soplex.git "${{ inputs.work-prefix }}/source/soplex"
+
+    - name: Checkout bliss
+      shell: bash
+      run: |
+        git clone -b v0.73.3 --depth 1 https://github.com/ds4dm/bliss.git "${{ inputs.work-prefix }}/source/bliss"
+
+    - name: Build an install bliss
+      shell: bash
+      run: |
+        mkdir -p "${{ inputs.work-prefix }}/build/bliss"
+        pushd "${{ inputs.work-prefix }}/build/bliss"
+        cmake \
+          -DCMAKE_INSTALL_PREFIX="${{ inputs.install-prefix }}" \
+          "${{ inputs.work-prefix }}/source/bliss"
+        make -j
+        make install
+        popd
+
+    - name: Build SoPlex
+      shell: bash
+      run: |
+        mkdir -p "${{ inputs.work-prefix }}/build/soplex"
+        pushd "${{ inputs.work-prefix }}/build/soplex"
+        cmake \
+          -DCMAKE_INSTALL_PREFIX="${{ inputs.install-prefix }}" \
+          "${{ inputs.work-prefix }}/source/soplex"
+        make -j
+        make install
+        cd ..
+
+    - name: Install C++ Boost (needed for PaPILO)
+      shell: bash
+      run: |
+        sudo apt-get install libboost-all-dev  
+    - name: Build PaPILO
+      shell: bash
+      run: |
+        mkdir -p "${{ inputs.work-prefix }}/build/papilo"
+        pushd "${{ inputs.work-prefix }}/build/papilo"
+        cmake -DCMAKE_INSTALL_PREFIX="${{ inputs.install-prefix }}" "${{ inputs.work-prefix }}/source/papilo"
+        make
+        make install
+        popd
+
+    - name: Build SCIP
+      shell: bash
+      run: |
+        mkdir -p "${{ inputs.work-prefix }}/build/scip"
+        pushd "${{ inputs.work-prefix }}/build/scip"
+        cmake \
+          -DCMAKE_INSTALL_PREFIX="${{ inputs.install-prefix }}" \
+          -DZIMPL=off \
+          -DIPOPT=off \
+          -DSOPLEX_DIR="${{ inputs.install-prefix }}" \
+          -DPAPILO_DIR="${{ inputs.install-prefix }}" \
+          -DBLISS_DIR="${{ inputs.install-prefix }}" \
+          "${{ inputs.work-prefix }}/source/scip"
+        make -j
+        make install
+        popd
