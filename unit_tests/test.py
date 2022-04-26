@@ -5,6 +5,7 @@ import pandas as pd
 import calculate_automorphisms
 
 
+@unittest.skip('Runtime too long')
 class MainTest(unittest.TestCase):
     def test_success_T_world(self):
         """
