@@ -57,5 +57,5 @@ jobs:
     - name: Test with unittest
       run: |
         pushd pyAGA/
-        python -m unittest unit_tests/test_short.py
+        python -m unittest
         popd
