@@ -1,5 +1,5 @@
-pyAGA - Find Approximate Graph Automorphisms
-============================================
+pyAGA - Finding Approximate Graph Automorphisms
+===============================================
 
 ## Installing Required Python Packages
 Please use Python version 3.6 or later.

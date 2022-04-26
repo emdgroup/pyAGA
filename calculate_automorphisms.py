@@ -4,7 +4,6 @@ import datetime
 import itertools
 import logging
 import os
-import platform
 import shutil
 
 import sys
@@ -154,7 +153,7 @@ def find_automorphisms_wrapper(
     result[1] = number_of_MIP_calls
 
 
-def try_bandwidths_and_tolerance_ratios(
+def try_bandwidths_and_tolerance_ratios(  # noqa: C901
     current_percentage: str,
     kde_bandwidths: np.ndarray,
     fault_tolerance_ratios: np.ndarray,
@@ -243,7 +242,7 @@ def try_bandwidths_and_tolerance_ratios(
                 thread.join(timeout=1)
 
                 if thread.is_alive():
-                    logger.warning(f"Calculation of automorphisms timed out.")
+                    logger.warning("Calculation of automorphisms timed out.")
                     # If a given bandwidth has timed out, all other subsequent
                     # bandwidths (as we assume an ordered list) will time out as well.
                     # Set this flag in order to skip them.
@@ -335,7 +334,7 @@ def try_bandwidths_and_tolerance_ratios(
             parameter_study_results.append(parameters)
 
 
-def num_generators_contained(
+def num_generators_contained(  # noqa: C901
     automorphisms: List[List[int]],
     norm: Norm,
     adjacency_matrix: np.ndarray,
@@ -395,8 +394,7 @@ def num_generators_contained(
     tmp = []
     for gen in permutation_group_generators:
         if not gen.is_Identity:
-            logger.debug(f"Adding generator:")
-            logger.debug(list(gen))
+            logger.debug(f"Adding generator:\n{list(gen)}")
             tmp.append(gen)
 
     # Verify that all fundamental generators are present in the permutation group
@@ -438,7 +436,7 @@ def num_generators_contained(
         vertical_shift.extend((column + i * num_vertical_pixels * color_depth).tolist())
     fundamental_generators.append(Permutation(vertical_shift))
     with_rotations = "rotations" in study_name
-    if "rotations" not in study_name:
+    if not with_rotations:
         # Create flip
         flip_without_colors = list(
             range(num_horizontal_pixels * num_vertical_pixels - 1, -1, -1)
@@ -515,7 +513,7 @@ def num_generators_contained(
     return len(tmp), all_fundamental_generators_present, group_order
 
 
-def main(running_as_test, config_name=None, study=None):
+def main(running_as_test, config_name=None, study=None):  # noqa: C901
     assert running_as_test or config_name is None
     global num_columns
     num_columns = 9
@@ -759,7 +757,7 @@ def main(running_as_test, config_name=None, study=None):
             try:
                 file.write(f"result: {parameter_study_results[0][7]}\n")
             except IndexError:
-                file.write(f"result: MIP Timeout without admissible solution")
+                file.write("result: MIP Timeout without admissible solution")
 
 
 if __name__ == "__main__":

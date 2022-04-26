@@ -3,7 +3,6 @@ from typing import List
 
 import numpy as np
 from sklearn.neighbors import KernelDensity
-import pickle
 import matplotlib.pyplot as plt
 import scipy.signal as spsig
 
@@ -32,8 +31,8 @@ def bins(matrix: np.ndarray, bandwidth: float, plot=False) -> List[float]:
     # well pronounced.
     plot_x = np.linspace(0, matrix.max() * 1.01, 1000)
     y = np.exp(kde.score_samples(plot_x.reshape(-1, 1)))
-    minima_indices = spsig.argrelmin(y)
-    minima_locations = plot_x[minima_indices]
+    # minima_indices = spsig.argrelmin(y)
+    # minima_locations = plot_x[minima_indices]
     maxima_indices = spsig.argrelmax(y)
     maxima_locations = plot_x[maxima_indices]
     maxima_diffs = np.diff(maxima_locations)
@@ -47,10 +46,10 @@ def bins(matrix: np.ndarray, bandwidth: float, plot=False) -> List[float]:
     if plot:
         fig, ax = plt.subplots(nrows=2, sharex=True)
         ax0, ax1 = ax
-        ax0.set_xlabel("concurrence $\langle x_1 x_2 \\rangle$")
-        ax1.set_xlabel("concurrence $\langle x_1 x_2 \\rangle$")
-        ax0.set_ylabel("value density $\\rho$")
-        ax1.set_ylabel("value frequency")
+        ax0.set_xlabel(r"concurrence $\langle x_1 x_2 \rangle$")
+        ax1.set_xlabel(r"concurrence $\langle x_1 x_2 \rangle$")
+        ax0.set_ylabel(r"value density $\rho$")
+        ax1.set_ylabel(r"value frequency")
         ax0.plot(plot_x, y)
         for bin in bins:
             ax1.axvline(bin, color="red")

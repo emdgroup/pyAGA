@@ -95,7 +95,7 @@ def find_automorphisms(
     return automorphisms, number_of_MIP_calls
 
 
-def calculate_automorphisms(
+def calculate_automorphisms(  # noqa: C901
     adjacency_matrix: np.ndarray,
     equivalency_classes: List[List[np.ndarray]],
     possible_mappings: List[Set],
