@@ -153,7 +153,7 @@ def find_automorphisms_wrapper(
     result[1] = number_of_MIP_calls
 
 
-def try_bandwidths_and_tolerance_ratios(
+def try_bandwidths_and_tolerance_ratios(  # noqa: C901
     current_percentage: str,
     kde_bandwidths: np.ndarray,
     fault_tolerance_ratios: np.ndarray,
@@ -334,7 +334,7 @@ def try_bandwidths_and_tolerance_ratios(
             parameter_study_results.append(parameters)
 
 
-def num_generators_contained(
+def num_generators_contained(  # noqa: C901
     automorphisms: List[List[int]],
     norm: Norm,
     adjacency_matrix: np.ndarray,
@@ -513,7 +513,7 @@ def num_generators_contained(
     return len(tmp), all_fundamental_generators_present, group_order
 
 
-def main(running_as_test, config_name=None, study=None):
+def main(running_as_test, config_name=None, study=None):  # noqa: C901
     assert running_as_test or config_name is None
     global num_columns
     num_columns = 9
