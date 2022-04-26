@@ -1,5 +1,4 @@
 import numpy as np
-from typing import Tuple
 from mipsym.mip import Norm
 
 
@@ -55,7 +54,7 @@ def matshow(v: np.ndarray):
     # Print ASCII-art of the matrix
     lines = ""
     for iRow in range(0, len(v), 2):
-        rows = v[iRow : iRow + 2]
+        rows = v[iRow:iRow + 2]
 
         if len(rows) < 2:
             rows = np.vstack((rows, np.zeros(len(rows.T))))

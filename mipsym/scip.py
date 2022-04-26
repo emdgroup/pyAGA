@@ -13,7 +13,6 @@ from pyomo.opt import (
     ResultsFormat,
     SolverResults,
     TerminationCondition,
-    SolutionStatus,
 )
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.solver import SystemCallSolver
