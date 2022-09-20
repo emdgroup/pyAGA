@@ -135,7 +135,7 @@ class SCIP_Shell(SystemCallSolver):
         #
         self._options_file = TempfileManager.create_tempfile(suffix=".scip.set")
 
-        # run ./scip -c "set save scip.set" to get the currently active settings; the following is a copy of a local run of this on scip 7.0.3
+        # run ./scip -c "set save scip.set" to get the currently active settings; the following is a copy of a local run of this on scip 7.0.3, settings unsupported in scip 8.0.0 have been removed
         options_file_content = {
             # branching score function ('s'um, 'p'roduct, 'q'uotient)
             # [type: char, advanced: TRUE, range: {spq}, default: p]
@@ -802,24 +802,6 @@ class SCIP_Shell(SystemCallSolver):
             # minimal efficacy for a cut to enter the LP in the root node
             # [type: real, advanced: FALSE, range: [0,1e+98], default: 0.0001]
             "separating/minefficacyroot": "0.0001",
-            # minimal orthogonality for a cut to enter the LP
-            # [type: real, advanced: FALSE, range: [0,1], default: 0.9]
-            "separating/minortho": "0.9",
-            # minimal orthogonality for a cut to enter the LP in the root node
-            # [type: real, advanced: FALSE, range: [0,1], default: 0.9]
-            "separating/minorthoroot": "0.9",
-            # factor to scale objective parallelism of cut in separation score calculation
-            # [type: real, advanced: TRUE, range: [0,1e+98], default: 0.1]
-            "separating/objparalfac": "0.1",
-            # factor to scale directed cutoff distance of cut in score calculation
-            # [type: real, advanced: TRUE, range: [0,1e+98], default: 0.5]
-            "separating/dircutoffdistfac": "0.5",
-            # factor to scale efficacy of cut in score calculation
-            # [type: real, advanced: TRUE, range: [0,1e+98], default: 0.6]
-            "separating/efficacyfac": "0.6",
-            # factor to scale integral support of cut in separation score calculation
-            # [type: real, advanced: TRUE, range: [0,1e+98], default: 0.1]
-            "separating/intsupportfac": "0.1",
             # minimum cut activity quotient to convert cuts into constraints during a restart (0.0: all cuts are converted)
             # [type: real, advanced: FALSE, range: [0,1], default: 0.8]
             "separating/minactivityquot": "0.8",
@@ -997,135 +979,9 @@ class SCIP_Shell(SystemCallSolver):
             # timing mask of the constraint handler's presolving method (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE, 32:FINAL)
             # [type: int, advanced: TRUE, range: [4,60], default: 28]
             "constraints/nonlinear/presoltiming": "28",
-            # maximal coef range of a cut (maximal coefficient divided by minimal coefficient) in order to be added to LP relaxation
-            # [type: real, advanced: FALSE, range: [0,1e+20], default: 10000000]
-            "constraints/nonlinear/cutmaxrange": "10000000",
-            # whether to try to make solutions in check function feasible by shifting a linear variable (esp. useful if constraint was actually objective function)
-            # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: TRUE]
-            "constraints/nonlinear/linfeasshift": "TRUE",
             # whether to assume that nonlinear functions in inequalities (<=) are convex (disables reformulation)
             # [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: FALSE]
             "constraints/nonlinear/assumeconvex": "FALSE",
-            # limit on number of propagation rounds for a single constraint within one round of SCIP propagation
-            # [type: int, advanced: FALSE, range: [0,2147483647], default: 1]
-            "constraints/nonlinear/maxproprounds": "1",
-            # whether to reformulate expression graph
-            # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: TRUE]
-            "constraints/nonlinear/reformulate": "TRUE",
-            # maximal exponent where still expanding non-monomial polynomials in expression simplification
-            # [type: int, advanced: TRUE, range: [1,2147483647], default: 2]
-            "constraints/nonlinear/maxexpansionexponent": "2",
-            # minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation
-            # [type: real, advanced: FALSE, range: [0,2], default: 1]
-            "constraints/nonlinear/sepanlpmincont": "1",
-            # are cuts added during enforcement removable from the LP in the same node?
-            # [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: FALSE]
-            "constraints/nonlinear/enfocutsremovable": "FALSE",
-            # frequency for separating cuts (-1: never, 0: only in root node)
-            # [type: int, advanced: FALSE, range: [-1,65534], default: 1]
-            "constraints/quadratic/sepafreq": "1",
-            # frequency for propagating domains (-1: never, 0: only in root node)
-            # [type: int, advanced: FALSE, range: [-1,65534], default: 1]
-            "constraints/quadratic/propfreq": "1",
-            # timing when constraint propagation should be called (1:BEFORELP, 2:DURINGLPLOOP, 4:AFTERLPLOOP, 15:ALWAYS)
-            # [type: int, advanced: TRUE, range: [1,15], default: 1]
-            "constraints/quadratic/proptiming": "1",
-            # frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
-            # [type: int, advanced: TRUE, range: [-1,65534], default: 100]
-            "constraints/quadratic/eagerfreq": "100",
-            # maximal number of presolving rounds the constraint handler participates in (-1: no limit)
-            # [type: int, advanced: TRUE, range: [-1,2147483647], default: -1]
-            "constraints/quadratic/maxprerounds": "-1",
-            # should separation method be delayed, if other separators found cuts?
-            # [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: FALSE]
-            "constraints/quadratic/delaysepa": "FALSE",
-            # should propagation method be delayed, if other propagators found reductions?
-            # [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: FALSE]
-            "constraints/quadratic/delayprop": "FALSE",
-            # timing mask of the constraint handler's presolving method (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE, 32:FINAL)
-            # [type: int, advanced: TRUE, range: [4,60], default: 28]
-            "constraints/quadratic/presoltiming": "28",
-            # max. length of linear term which when multiplied with a binary variables is replaced by an auxiliary variable and a linear reformulation (0 to turn off)
-            # [type: int, advanced: FALSE, range: [0,2147483647], default: 2147483647]
-            "constraints/quadratic/replacebinaryprod": "2147483647",
-            # empathy level for using the AND constraint handler: 0 always avoid using AND; 1 use AND sometimes; 2 use AND as often as possible
-            # [type: int, advanced: FALSE, range: [0,2], default: 2]
-            "constraints/quadratic/empathy4and": "2",
-            # whether to make non-varbound linear constraints added due to replacing products with binary variables initial
-            # [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: FALSE]
-            "constraints/quadratic/binreforminitial": "FALSE",
-            # whether to consider only binary variables when replacing products with binary variables
-            # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: TRUE]
-            "constraints/quadratic/binreformbinaryonly": "TRUE",
-            # limit (as factor on 1/feastol) on coefficients and coef. range in linear constraints created when replacing products with binary variables
-            # [type: real, advanced: TRUE, range: [0,1e+20], default: 0.0001]
-            "constraints/quadratic/binreformmaxcoef": "0.0001",
-            # maximal coef range of a cut (maximal coefficient divided by minimal coefficient) in order to be added to LP relaxation
-            # [type: real, advanced: TRUE, range: [0,1e+20], default: 10000000]
-            "constraints/quadratic/cutmaxrange": "10000000",
-            # minimal curvature of constraints to be considered when returning bilinear terms to other plugins
-            # [type: real, advanced: TRUE, range: [-1e+20,1e+20], default: 0.8]
-            "constraints/quadratic/mincurvcollectbilinterms": "0.8",
-            # whether linearizations of convex quadratic constraints should be added to cutpool in a solution found by some heuristic
-            # [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: TRUE]
-            "constraints/quadratic/linearizeheursol": "TRUE",
-            # whether multivariate quadratic functions should be checked for convexity/concavity
-            # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: TRUE]
-            "constraints/quadratic/checkcurvature": "TRUE",
-            # whether constraint functions should be checked to be factorable
-            # [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: TRUE]
-            "constraints/quadratic/checkfactorable": "TRUE",
-            # whether quadratic variables contained in a single constraint should be forced to be at their lower or upper bounds ('d'isable, change 't'ype, add 'b'ound disjunction)
-            # [type: char, advanced: TRUE, range: {bdt}, default: t]
-            "constraints/quadratic/checkquadvarlocks": "t",
-            # whether to try to make solutions in check function feasible by shifting a linear variable (esp. useful if constraint was actually objective function)
-            # [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: TRUE]
-            "constraints/quadratic/linfeasshift": "TRUE",
-            # maximum number of created constraints when disaggregating a quadratic constraint (<= 1: off)
-            # [type: int, advanced: FALSE, range: [1,2147483647], default: 1]
-            "constraints/quadratic/maxdisaggrsize": "1",
-            # strategy how to merge independent blocks to reach maxdisaggrsize limit (keep 'b'iggest blocks and merge others; keep 's'mallest blocks and merge other; merge small blocks into bigger blocks to reach 'm'ean sizes)
-            # [type: char, advanced: TRUE, range: {bms}, default: m]
-            "constraints/quadratic/disaggrmergemethod": "m",
-            # limit on number of propagation rounds for a single constraint within one round of SCIP propagation during solve
-            # [type: int, advanced: TRUE, range: [0,2147483647], default: 1]
-            "constraints/quadratic/maxproprounds": "1",
-            # limit on number of propagation rounds for a single constraint within one round of SCIP presolve
-            # [type: int, advanced: TRUE, range: [0,2147483647], default: 10]
-            "constraints/quadratic/maxproproundspresolve": "10",
-            # maximum number of enforcement rounds before declaring the LP relaxation infeasible (-1: no limit); WARNING: changing this parameter might lead to incorrect results!
-            # [type: int, advanced: TRUE, range: [-1,2147483647], default: -1]
-            "constraints/quadratic/enfolplimit": "-1",
-            # minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation
-            # [type: real, advanced: FALSE, range: [0,2], default: 1]
-            "constraints/quadratic/sepanlpmincont": "1",
-            # are cuts added during enforcement removable from the LP in the same node?
-            # [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: FALSE]
-            "constraints/quadratic/enfocutsremovable": "FALSE",
-            # should convex quadratics generated strong cuts via gauge function?
-            # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
-            "constraints/quadratic/gaugecuts": "FALSE",
-            # how the interior point for gauge cuts should be computed: 'a'ny point per constraint, 'm'ost interior per constraint
-            # [type: char, advanced: TRUE, range: {am}, default: a]
-            "constraints/quadratic/interiorcomputation": "a",
-            # should convex quadratics generated strong cuts via projections?
-            # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
-            "constraints/quadratic/projectedcuts": "FALSE",
-            # which score to give branching candidates: convexification 'g'ap, constraint 'v'iolation, 'c'entrality of variable value in domain
-            # [type: char, advanced: TRUE, range: {cgv}, default: g]
-            "constraints/quadratic/branchscoring": "g",
-            # should linear inequalities be consindered when computing the branching scores for bilinear terms?
-            # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
-            "constraints/quadratic/usebilinineqbranch": "FALSE",
-            # minimal required score in order to use linear inequalities for tighter bilinear relaxations
-            # [type: real, advanced: FALSE, range: [0,1], default: 0.01]
-            "constraints/quadratic/minscorebilinterms": "0.01",
-            # maximum number of separation rounds to use linear inequalities for the bilinear term relaxation in a local node
-            # [type: int, advanced: TRUE, range: [0,2147483647], default: 3]
-            "constraints/quadratic/bilinineqmaxseparounds": "3",
-            # enable nonlinear upgrading for constraint handler <quadratic>
-            # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: TRUE]
-            "constraints/nonlinear/upgrade/quadratic": "TRUE",
             # priority of conflict handler <linear>
             # [type: int, advanced: TRUE, range: [-2147483648,2147483647], default: -1000000]
             "conflict/linear/priority": "-1000000",
@@ -1153,9 +1009,6 @@ class SCIP_Shell(SystemCallSolver):
             # timing mask of the constraint handler's presolving method (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE, 32:FINAL)
             # [type: int, advanced: TRUE, range: [4,60], default: 20]
             "constraints/linear/presoltiming": "20",
-            # enable quadratic upgrading for constraint handler <linear>
-            # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: TRUE]
-            "constraints/quadratic/upgrade/linear": "TRUE",
             # enable nonlinear upgrading for constraint handler <linear>
             # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: TRUE]
             "constraints/nonlinear/upgrade/linear": "TRUE",
@@ -1254,66 +1107,6 @@ class SCIP_Shell(SystemCallSolver):
             "constraints/linear/extractcliques": "TRUE",
             # frequency for separating cuts (-1: never, 0: only in root node)
             # [type: int, advanced: FALSE, range: [-1,65534], default: 1]
-            "constraints/abspower/sepafreq": "1",
-            # frequency for propagating domains (-1: never, 0: only in root node)
-            # [type: int, advanced: FALSE, range: [-1,65534], default: 1]
-            "constraints/abspower/propfreq": "1",
-            # timing when constraint propagation should be called (1:BEFORELP, 2:DURINGLPLOOP, 4:AFTERLPLOOP, 15:ALWAYS)
-            # [type: int, advanced: TRUE, range: [1,15], default: 15]
-            "constraints/abspower/proptiming": "15",
-            # frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
-            # [type: int, advanced: TRUE, range: [-1,65534], default: 100]
-            "constraints/abspower/eagerfreq": "100",
-            # maximal number of presolving rounds the constraint handler participates in (-1: no limit)
-            # [type: int, advanced: TRUE, range: [-1,2147483647], default: -1]
-            "constraints/abspower/maxprerounds": "-1",
-            # should separation method be delayed, if other separators found cuts?
-            # [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: FALSE]
-            "constraints/abspower/delaysepa": "FALSE",
-            # should propagation method be delayed, if other propagators found reductions?
-            # [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: FALSE]
-            "constraints/abspower/delayprop": "FALSE",
-            # timing mask of the constraint handler's presolving method (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE, 32:FINAL)
-            # [type: int, advanced: TRUE, range: [4,60], default: 12]
-            "constraints/abspower/presoltiming": "12",
-            # enable quadratic upgrading for constraint handler <abspower>
-            # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: TRUE]
-            "constraints/quadratic/upgrade/abspower": "TRUE",
-            # enable nonlinear upgrading for constraint handler <abspower>
-            # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: TRUE]
-            "constraints/nonlinear/upgrade/abspower": "TRUE",
-            # maximal coef range of a cut (maximal coefficient divided by minimal coefficient) in order to be added to LP relaxation
-            # [type: real, advanced: FALSE, range: [0,1e+20], default: 10000000]
-            "constraints/abspower/cutmaxrange": "10000000",
-            # whether to project the reference point when linearizing an absolute power constraint in a convex region
-            # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: TRUE]
-            "constraints/abspower/projectrefpoint": "TRUE",
-            # how much to prefer branching on 0.0 when sign of variable is not fixed yet: 0 no preference, 1 prefer if LP solution will be cutoff in both child nodes, 2 prefer always, 3 ensure always
-            # [type: int, advanced: FALSE, range: [0,3], default: 1]
-            "constraints/abspower/preferzerobranch": "1",
-            # whether to compute branching point such that the convexification error is minimized (after branching on 0.0)
-            # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
-            "constraints/abspower/branchminconverror": "FALSE",
-            # should variable bound constraints be added for derived variable bounds?
-            # [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: TRUE]
-            "constraints/abspower/addvarboundcons": "TRUE",
-            # whether to try to make solutions in check function feasible by shifting the linear variable z
-            # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: TRUE]
-            "constraints/abspower/linfeasshift": "TRUE",
-            # should dual presolve be applied?
-            # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: TRUE]
-            "constraints/abspower/dualpresolve": "TRUE",
-            # whether to separate linearization cuts only in the variable bounds (does not affect enforcement)
-            # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
-            "constraints/abspower/sepainboundsonly": "FALSE",
-            # minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation
-            # [type: real, advanced: FALSE, range: [0,2], default: 1]
-            "constraints/abspower/sepanlpmincont": "1",
-            # are cuts added during enforcement removable from the LP in the same node?
-            # [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: FALSE]
-            "constraints/abspower/enfocutsremovable": "FALSE",
-            # frequency for separating cuts (-1: never, 0: only in root node)
-            # [type: int, advanced: FALSE, range: [-1,65534], default: 1]
             "constraints/and/sepafreq": "1",
             # frequency for propagating domains (-1: never, 0: only in root node)
             # [type: int, advanced: FALSE, range: [-1,65534], default: 1]
@@ -1357,9 +1150,6 @@ class SCIP_Shell(SystemCallSolver):
             # should dual presolving be performed?
             # [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: TRUE]
             "constraints/and/dualpresolving": "TRUE",
-            # enable nonlinear upgrading for constraint handler <and>
-            # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: TRUE]
-            "constraints/nonlinear/upgrade/and": "TRUE",
             # frequency for separating cuts (-1: never, 0: only in root node)
             # [type: int, advanced: FALSE, range: [-1,65534], default: -1]
             "constraints/benders/sepafreq": "-1",
@@ -1426,51 +1216,6 @@ class SCIP_Shell(SystemCallSolver):
             # is the Benders' decomposition LP cut constraint handler active?
             # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
             "constraints/benderslp/active": "FALSE",
-            # frequency for separating cuts (-1: never, 0: only in root node)
-            # [type: int, advanced: FALSE, range: [-1,65534], default: 1]
-            "constraints/bivariate/sepafreq": "1",
-            # frequency for propagating domains (-1: never, 0: only in root node)
-            # [type: int, advanced: FALSE, range: [-1,65534], default: 1]
-            "constraints/bivariate/propfreq": "1",
-            # timing when constraint propagation should be called (1:BEFORELP, 2:DURINGLPLOOP, 4:AFTERLPLOOP, 15:ALWAYS)
-            # [type: int, advanced: TRUE, range: [1,15], default: 1]
-            "constraints/bivariate/proptiming": "1",
-            # frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
-            # [type: int, advanced: TRUE, range: [-1,65534], default: 100]
-            "constraints/bivariate/eagerfreq": "100",
-            # maximal number of presolving rounds the constraint handler participates in (-1: no limit)
-            # [type: int, advanced: TRUE, range: [-1,2147483647], default: -1]
-            "constraints/bivariate/maxprerounds": "-1",
-            # should separation method be delayed, if other separators found cuts?
-            # [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: FALSE]
-            "constraints/bivariate/delaysepa": "FALSE",
-            # should propagation method be delayed, if other propagators found reductions?
-            # [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: FALSE]
-            "constraints/bivariate/delayprop": "FALSE",
-            # timing mask of the constraint handler's presolving method (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE, 32:FINAL)
-            # [type: int, advanced: TRUE, range: [4,60], default: 4]
-            "constraints/bivariate/presoltiming": "4",
-            # enable quadratic upgrading for constraint handler <bivariate>
-            # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
-            "constraints/quadratic/upgrade/bivariate": "FALSE",
-            # enable nonlinear upgrading for constraint handler <bivariate>
-            # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
-            "constraints/nonlinear/upgrade/bivariate": "FALSE",
-            # maximal coef range of a cut (maximal coefficient divided by minimal coefficient) in order to be added to LP relaxation
-            # [type: real, advanced: TRUE, range: [0,1e+20], default: 10000000]
-            "constraints/bivariate/cutmaxrange": "10000000",
-            # whether to try to make solutions in check function feasible by shifting a linear variable (esp. useful if constraint was actually objective function)
-            # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: TRUE]
-            "constraints/bivariate/linfeasshift": "TRUE",
-            # limit on number of propagation rounds for a single constraint within one round of SCIP propagation
-            # [type: int, advanced: FALSE, range: [0,2147483647], default: 1]
-            "constraints/bivariate/maxproprounds": "1",
-            # number of reference points in each direction where to compute linear support for envelope in LP initialization
-            # [type: int, advanced: FALSE, range: [0,2147483647], default: 3]
-            "constraints/bivariate/ninitlprefpoints": "3",
-            # are cuts added during enforcement removable from the LP in the same node?
-            # [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: FALSE]
-            "constraints/bivariate/enfocutsremovable": "FALSE",
             # maximal percantage of continuous variables within a conflict
             # [type: real, advanced: FALSE, range: [0,1], default: 0.4]
             "conflict/bounddisjunction/continuousfrac": "0.4",
@@ -1501,9 +1246,6 @@ class SCIP_Shell(SystemCallSolver):
             # timing mask of the constraint handler's presolving method (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE, 32:FINAL)
             # [type: int, advanced: TRUE, range: [4,60], default: 4]
             "constraints/bounddisjunction/presoltiming": "4",
-            # enable quadratic upgrading for constraint handler <bounddisjunction>
-            # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: TRUE]
-            "constraints/quadratic/upgrade/bounddisjunction": "TRUE",
             # frequency for separating cuts (-1: never, 0: only in root node)
             # [type: int, advanced: FALSE, range: [-1,65534], default: 10]
             "constraints/cardinality/sepafreq": "10",
@@ -2116,10 +1858,7 @@ class SCIP_Shell(SystemCallSolver):
             # Whether we separate inequalities for full orbitopes?
             # [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: FALSE]
             "constraints/orbitope/sepafullorbitope": "FALSE",
-            # Whether we use a dynamic version of the propagation routine.
-            # [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: TRUE]
-            "constraints/orbitope/usedynamicprop": "TRUE",
-            # Whether orbitope constraints should be forced to be copied to sub SCIPs.
+             # Whether orbitope constraints should be forced to be copied to sub SCIPs.
             # [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: FALSE]
             "constraints/orbitope/forceconscopy": "FALSE",
             # frequency for separating cuts (-1: never, 0: only in root node)
@@ -2191,9 +1930,6 @@ class SCIP_Shell(SystemCallSolver):
             # enable linear upgrading for constraint handler <setppc>
             # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: TRUE]
             "constraints/linear/upgrade/setppc": "TRUE",
-            # enable quadratic upgrading for constraint handler <setppc>
-            # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: TRUE]
-            "constraints/quadratic/upgrade/setppc": "TRUE",
             # number of children created in pseudo branching (0: disable pseudo branching)
             # [type: int, advanced: TRUE, range: [0,2147483647], default: 2]
             "constraints/setppc/npseudobranches": "2",
@@ -2215,69 +1951,6 @@ class SCIP_Shell(SystemCallSolver):
             # should we try to shrink the number of variables in a clique constraints, by replacing more than one variable by only one
             # [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: TRUE]
             "constraints/setppc/cliqueshrinking": "TRUE",
-            # frequency for separating cuts (-1: never, 0: only in root node)
-            # [type: int, advanced: FALSE, range: [-1,65534], default: 1]
-            "constraints/soc/sepafreq": "1",
-            # frequency for propagating domains (-1: never, 0: only in root node)
-            # [type: int, advanced: FALSE, range: [-1,65534], default: 1]
-            "constraints/soc/propfreq": "1",
-            # timing when constraint propagation should be called (1:BEFORELP, 2:DURINGLPLOOP, 4:AFTERLPLOOP, 15:ALWAYS)
-            # [type: int, advanced: TRUE, range: [1,15], default: 1]
-            "constraints/soc/proptiming": "1",
-            # frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
-            # [type: int, advanced: TRUE, range: [-1,65534], default: 100]
-            "constraints/soc/eagerfreq": "100",
-            # maximal number of presolving rounds the constraint handler participates in (-1: no limit)
-            # [type: int, advanced: TRUE, range: [-1,2147483647], default: -1]
-            "constraints/soc/maxprerounds": "-1",
-            # should separation method be delayed, if other separators found cuts?
-            # [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: FALSE]
-            "constraints/soc/delaysepa": "FALSE",
-            # should propagation method be delayed, if other propagators found reductions?
-            # [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: FALSE]
-            "constraints/soc/delayprop": "FALSE",
-            # timing mask of the constraint handler's presolving method (4:FAST, 8:MEDIUM, 16:EXHAUSTIVE, 32:FINAL)
-            # [type: int, advanced: TRUE, range: [4,60], default: 28]
-            "constraints/soc/presoltiming": "28",
-            # enable quadratic upgrading for constraint handler <soc>
-            # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: TRUE]
-            "constraints/quadratic/upgrade/soc": "TRUE",
-            # whether the reference point of a cut should be projected onto the feasible set of the SOC constraint
-            # [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: FALSE]
-            "constraints/soc/projectpoint": "FALSE",
-            # number of auxiliary variables to use when creating a linear outer approx. of a SOC3 constraint; 0 to turn off
-            # [type: int, advanced: FALSE, range: [0,2147483647], default: 0]
-            "constraints/soc/nauxvars": "0",
-            # whether the Glineur Outer Approximation should be used instead of Ben-Tal Nemirovski
-            # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: TRUE]
-            "constraints/soc/glineur": "TRUE",
-            # whether to sparsify cuts
-            # [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: FALSE]
-            "constraints/soc/sparsify": "FALSE",
-            # maximal loss in cut efficacy by sparsification
-            # [type: real, advanced: TRUE, range: [0,1], default: 0.2]
-            "constraints/soc/sparsifymaxloss": "0.2",
-            # growth rate of maximal allowed nonzeros in cuts in sparsification
-            # [type: real, advanced: TRUE, range: [1.000001,1e+20], default: 1.3]
-            "constraints/soc/sparsifynzgrowth": "1.3",
-            # whether to try to make solutions feasible in check by shifting the variable on the right hand side
-            # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: TRUE]
-            "constraints/soc/linfeasshift": "TRUE",
-            # which formulation to use when adding a SOC constraint to the NLP (a: automatic, q: nonconvex quadratic form, s: convex sqrt form, e: convex exponential-sqrt form, d: convex division form)
-            # [type: char, advanced: FALSE, range: {aqsed}, default: a]
-            "constraints/soc/nlpform": "a",
-            # minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation
-            # [type: real, advanced: FALSE, range: [0,2], default: 1]
-            "constraints/soc/sepanlpmincont": "1",
-            # are cuts added during enforcement removable from the LP in the same node?
-            # [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: FALSE]
-            "constraints/soc/enfocutsremovable": "FALSE",
-            # try to upgrade more general quadratics to soc?
-            # [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: TRUE]
-            "constraints/soc/generalsocupgrade": "TRUE",
-            # try to completely disaggregate soc?
-            # [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: TRUE]
-            "constraints/soc/disaggregate": "TRUE",
             # frequency for separating cuts (-1: never, 0: only in root node)
             # [type: int, advanced: FALSE, range: [-1,65534], default: 10]
             "constraints/SOS1/sepafreq": "10",
@@ -5275,9 +4948,6 @@ class SCIP_Shell(SystemCallSolver):
             # maximum distance between two points in the same cluster
             # [type: real, advanced: FALSE, range: [0,1e+20], default: 0.15]
             "heuristics/multistart/maxreldist": "0.15",
-            # factor by which heuristic should at least improve the incumbent
-            # [type: real, advanced: FALSE, range: [0,1e+20], default: 0]
-            "heuristics/multistart/nlpminimpr": "0",
             # limit for gradient computations for all improvePoint() calls (0 for no limit)
             # [type: real, advanced: FALSE, range: [0,1e+20], default: 5000000]
             "heuristics/multistart/gradlimit": "5000000",
@@ -5968,36 +5638,9 @@ class SCIP_Shell(SystemCallSolver):
             # verbosity level of NLP solver
             # [type: int, advanced: FALSE, range: [0,2147483647], default: 0]
             "heuristics/subnlp/nlpverblevel": "0",
-            # iteration limit of NLP solver; 0 to use solver default
-            # [type: int, advanced: FALSE, range: [0,2147483647], default: 0]
-            "heuristics/subnlp/nlpiterlimit": "0",
-            # time limit of NLP solver; 0 to use solver default
-            # [type: real, advanced: FALSE, range: [0,1e+20], default: 0]
-            "heuristics/subnlp/nlptimelimit": "0",
-            # name of an NLP solver specific options file
-            # [type: string, advanced: TRUE, default: ""]
-            "heuristics/subnlp/nlpoptfile": '""',
-            # if SCIP does not accept a NLP feasible solution, resolve NLP with feas. tolerance reduced by this factor (set to 1.0 to turn off resolve)
-            # [type: real, advanced: TRUE, range: [0,1], default: 0.001]
-            "heuristics/subnlp/resolvetolfactor": "0.001",
-            # should the NLP resolve be started from the original starting point or the infeasible solution?
-            # [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: TRUE]
-            "heuristics/subnlp/resolvefromscratch": "TRUE",
-            # number of iterations added to the contingent of the total number of iterations
-            # [type: int, advanced: FALSE, range: [0,2147483647], default: 500]
-            "heuristics/subnlp/iteroffset": "500",
-            # contingent of NLP iterations in relation to the number of nodes in SCIP
-            # [type: real, advanced: FALSE, range: [0,1e+20], default: 0.1]
-            "heuristics/subnlp/iterquotient": "0.1",
             # contingent of NLP iterations in relation to the number of nodes in SCIP
             # [type: int, advanced: FALSE, range: [0,2147483647], default: 300]
             "heuristics/subnlp/itermin": "300",
-            # whether to run NLP heuristic always if starting point available (does not use iteroffset,iterquot,itermin)
-            # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
-            "heuristics/subnlp/runalways": "FALSE",
-            # factor by which NLP heuristic should at least improve the incumbent
-            # [type: real, advanced: TRUE, range: [0,1], default: 0.01]
-            "heuristics/subnlp/minimprove": "0.01",
             # limit on number of presolve rounds in sub-SCIP (-1 for unlimited, 0 for no presolve)
             # [type: int, advanced: TRUE, range: [-1,2147483647], default: -1]
             "heuristics/subnlp/maxpresolverounds": "-1",
@@ -6724,9 +6367,9 @@ class SCIP_Shell(SystemCallSolver):
             # run orbital fixing during presolving?
             # [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: FALSE]
             "propagating/symmetry/performpresolving": "FALSE",
-            # recompute symmetries after a restart has occured?
-            # [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: FALSE]
-            "propagating/symmetry/recomputerestart": "FALSE",
+            # recompute symmetries after a restart has occured? (0 = never, 1 = always, 2 = if OF found reduction)
+            # [type: int, advanced: TRUE, range: [0,2], default: 0]
+            "propagating/symmetry/recomputerestart": "0",
             # Should non-affected variables be removed from permutation to save memory?
             # [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: TRUE]
             "propagating/symmetry/compresssymmetries": "TRUE",
@@ -6736,9 +6379,6 @@ class SCIP_Shell(SystemCallSolver):
             # Should the number of conss a variable is contained in be exploited in symmetry detection?
             # [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: FALSE]
             "propagating/symmetry/usecolumnsparsity": "FALSE",
-            # Shall orbital fixing be disabled if orbital fixing has found a reduction and a restart occurs?
-            # [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: FALSE]
-            "propagating/symmetry/disableofrestart": "FALSE",
             # Whether all non-binary variables shall be not affected by symmetries if OF is active?
             # [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: FALSE]
             "propagating/symmetry/symfixnonbinaryvars": "FALSE",
@@ -7129,9 +6769,6 @@ class SCIP_Shell(SystemCallSolver):
             # iteration limit of NLP solver; 0 for no limit
             # [type: int, advanced: TRUE, range: [0,2147483647], default: 250]
             "separating/convexproj/nlpiterlimit": "250",
-            # time limit of NLP solver; 0.0 for no limit
-            # [type: real, advanced: TRUE, range: [0,1.79769313486232e+308], default: 0]
-            "separating/convexproj/nlptimelimit": "0",
             # priority of separator <disjunctive>
             # [type: int, advanced: TRUE, range: [-536870912,536870911], default: 10]
             "separating/disjunctive/priority": "10",
@@ -7246,9 +6883,6 @@ class SCIP_Shell(SystemCallSolver):
             # iteration limit of NLP solver; 0 for no limit
             # [type: int, advanced: TRUE, range: [0,2147483647], default: 1000]
             "separating/gauge/nlpiterlimit": "1000",
-            # time limit of NLP solver; 0.0 for no limit
-            # [type: real, advanced: TRUE, range: [0,1.79769313486232e+308], default: 0]
-            "separating/gauge/nlptimelimit": "0",
             # priority of separator <gomory>
             # [type: int, advanced: TRUE, range: [-536870912,536870911], default: -1000]
             "separating/gomory/priority": "-1000",
@@ -7594,21 +7228,6 @@ class SCIP_Shell(SystemCallSolver):
             # base for exponential increase of frequency at which separator <strongcg> is called (1: call at each multiple of frequency)
             # [type: int, advanced: TRUE, range: [1,100], default: 4]
             "separating/strongcg/expbackoff": "4",
-            # maximal number of strong CG separation rounds per node (-1: unlimited)
-            # [type: int, advanced: FALSE, range: [-1,2147483647], default: 5]
-            "separating/strongcg/maxrounds": "5",
-            # maximal number of strong CG separation rounds in the root node (-1: unlimited)
-            # [type: int, advanced: FALSE, range: [-1,2147483647], default: 20]
-            "separating/strongcg/maxroundsroot": "20",
-            # maximal number of strong CG cuts separated per separation round
-            # [type: int, advanced: FALSE, range: [0,2147483647], default: 20]
-            "separating/strongcg/maxsepacuts": "20",
-            # maximal number of strong CG cuts separated per separation round in the root node
-            # [type: int, advanced: FALSE, range: [0,2147483647], default: 500]
-            "separating/strongcg/maxsepacutsroot": "500",
-            # should generated cuts be removed from the LP if they are no longer tight?
-            # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: TRUE]
-            "separating/strongcg/dynamiccuts": "TRUE",
             # priority of separator <zerohalf>
             # [type: int, advanced: TRUE, range: [-536870912,536870911], default: -6000]
             "separating/zerohalf/priority": "-6000",

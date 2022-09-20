@@ -39,6 +39,7 @@ def create_mip_solver(solver: Solver, norm: Norm):
     elif solver == Solver.SCIP:
         solver_factory_params = dict(_name="scip")
         solver_executable = [
+            '/Users/m290886/Downloads/SCIP-8/SCIPOptSuite-8.0.0-Darwin/bin/scip',
             "C:/Program Files/SCIPOptSuite 7.0.3/bin/scip",
         ]
         solver_options = dict()
