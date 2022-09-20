@@ -5,6 +5,7 @@ from functools import lru_cache
 
 import numpy as np
 import pyomo.environ as po
+from pyomo.core.util import quicksum
 
 from mipsym.mip import Norm
 
@@ -123,11 +124,11 @@ def create_reduced_mip_model(
         #  | 31 35 32 34 33 |
 
         #  (P @ A_row_l - A_row_r @ P)_ij       i in m.U, j in m.N
-        P_times_A_ij = sum(get(m.P, i, k) * get(m.A_row_l, k, j) for k in m.U)
+        P_times_A_ij = quicksum(get(m.P, i, k) * get(m.A_row_l, k, j) for k in m.U)
         A_times_P_ij = (
             get(m.A_row_r, i, j)
             if j not in col_index_map
-            else sum(
+            else quicksum(
                 get(m.A_row_r, i, col_index_map[k]) * get(m.P, k, col_index_map.index(j))
                 for k in m.U
             )
@@ -149,12 +150,12 @@ def create_reduced_mip_model(
         P_times_A_ij = (
             get(m.A_col_l, i, j)
             if i not in row_index_map
-            else sum(
+            else quicksum(
                 get(m.P, row_index_map.index(i), k) * get(m.A_col_l, row_index_map[k], j)
                 for k in m.U
             )
         )
-        A_times_P_ij = sum(get(m.A_col_r, i, k) * get(m.P, k, j) for k in m.U)
+        A_times_P_ij = quicksum(get(m.A_col_r, i, k) * get(m.P, k, j) for k in m.U)
 
         return P_times_A_ij - A_times_P_ij
 
