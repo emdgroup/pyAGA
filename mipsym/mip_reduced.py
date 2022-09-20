@@ -1,6 +1,7 @@
 from typing import List
 import logging
 import time
+from functools import lru_cache
 
 import numpy as np
 import pyomo.environ as po
@@ -90,6 +91,11 @@ def create_reduced_mip_model(
         model.U, rule=lambda m, j: 1 == sum(m.P[i, j] for i in m.U)
     )
 
+    @lru_cache(maxsize=None)
+    def get(mat, row, col):
+        return mat[row, col]
+
+    @lru_cache(maxsize=None)
     def deviation_A_row(m, i, j):
         """
         Create entry (i,j) of the expression "P @ A_row-A_row @ P"
@@ -117,37 +123,38 @@ def create_reduced_mip_model(
         #  | 31 35 32 34 33 |
 
         #  (P @ A_row_l - A_row_r @ P)_ij       i in m.U, j in m.N
-        P_times_A_ij = sum(m.P[i, k] * m.A_row_l[k, j] for k in m.U)
+        P_times_A_ij = sum(get(m.P, i, k) * get(m.A_row_l, k, j) for k in m.U)
         A_times_P_ij = (
-            A_row_r[i, j]
+            get(m.A_row_r, i, j)
             if j not in col_index_map
             else sum(
-                m.A_row_r[i, col_index_map[k]] * m.P[k, col_index_map.index(j)]
+                get(m.A_row_r, i, col_index_map[k]) * get(m.P, k, col_index_map.index(j))
                 for k in m.U
             )
         )
 
         return P_times_A_ij - A_times_P_ij
 
+    @lru_cache(maxsize=None)
     def deviation_A_col(m, i, j):
         """
         Create entry (i,j) of the expression "P @ A_col-A_col @ P"
         As neither P nor A_col are square, this is a bit involved and requires some index juggling
-        :param norm: The norm that shoiuld be used for the optimization
+        :param norm: The norm that should be used for the optimization
         :param m: The model
         :param i: Row index
         :param j: Column index
         """
         #  (P @ A_col_l - A_col_r @ P)_ij       i in m.N, j in m.U
         P_times_A_ij = (
-            A_col_l[i, j]
+            get(m.A_col_l, i, j)
             if i not in row_index_map
             else sum(
-                m.P[row_index_map.index(i), k] * m.A_col_l[row_index_map[k], j]
+                get(m.P, row_index_map.index(i), k) * get(m.A_col_l, row_index_map[k], j)
                 for k in m.U
             )
         )
-        A_times_P_ij = sum(m.A_col_r[i, k] * m.P[k, j] for k in m.U)
+        A_times_P_ij = sum(get(m.A_col_r, i, k) * get(m.P, k, j) for k in m.U)
 
         return P_times_A_ij - A_times_P_ij
 
