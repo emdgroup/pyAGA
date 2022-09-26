@@ -8,7 +8,7 @@ def deviation_value(norm: Norm, P: np.ndarray, A: np.ndarray):
     elif norm == Norm.L_1:
         return np.sum(np.abs(P @ A - A @ P))
     elif norm == Norm.L_2:
-        return np.sum((P @ A - A @ P) ** 2)
+        return np.sqrt(np.sum((P @ A - A @ P) ** 2))
 
 
 def to_matrix(trafo) -> np.ndarray:
